@@ -1,0 +1,1 @@
+{"version":3,"file":"bundle.js","sources":["../src/main.ts"],"sourcesContent":["// frontend/src/main.ts\r\nconsole.log(\"Frontend is running!\");\r\nconsole.log(\"Hello from the frontend!\");\r\nconsole.log(\"Hello dfsdsadsdadada!\");\r\n"],"names":["console","log"],"mappings":"yBACAA,QAAQC,IAAI,wBACZD,QAAQC,IAAI,4BACZD,QAAQC,IAAI"}
