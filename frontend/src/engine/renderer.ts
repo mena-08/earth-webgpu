@@ -14,6 +14,8 @@ export class Renderer {
     private camera!: Camera;
     private cameraControls!: CameraControls;
     private depthTexture!: GPUTexture;
+    private lastRenderTime : number= 0;
+    private sphere!: Sphere;
 
     constructor(canvasId: string) {
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -28,6 +30,7 @@ export class Renderer {
             const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0]);
             const sphere = new Sphere(this.device, [0.0, -1.0, 0.0, 1.0], [0.0, 0.0, 0.0], 0.6);
+            this.sphere = sphere;
             this.scene.addObject(triangle);
             this.scene.addObject(triangle2);
             this.scene.addObject(sphere);
@@ -121,6 +124,15 @@ export class Renderer {
         this.camera.updateViewMatrix();
         this.camera.updateProjectionMatrix();
         this.cameraControls.updateCameraOrbit(0.01);
+
+        //try rotation stuff
+        const timestamp = performance.now();
+        const deltaTime = (timestamp - this.lastRenderTime) / 1000;
+        this.lastRenderTime = timestamp;
+
+        const rotationSpeed = Math.PI / 10; // Rotation speed (radians per second)
+        const angle = rotationSpeed * deltaTime;
+        this.sphere.rotate([0, 1, 0], angle);
 
         const commandEncoder = this.device.createCommandEncoder();
         const textureView = this.context.getCurrentTexture().createView();

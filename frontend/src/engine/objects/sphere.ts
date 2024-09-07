@@ -1,5 +1,6 @@
 import { Camera } from "../camera/camera";
 import { createSampler, loadTexture } from "../loaders/texture-loader";
+import {vec3, mat4 } from 'wgpu-matrix';
 
 // frontend/src/engine/Sphere.ts
 export class Sphere {
@@ -7,20 +8,27 @@ export class Sphere {
     private pipeline!: GPURenderPipeline;
     private vertexBuffer!: GPUBuffer;
     private indexBuffer!: GPUBuffer;
+
     private color: Float32Array;
     private position: Float32Array;
     private radius: number = 0.5;
+    private texture!: GPUTexture;
+    private sampler!: GPUSampler;
+
     private numIndices!: number;
     private uniformBuffer!: GPUBuffer;
     private bindGroup!: GPUBindGroup;
-    private texture!: GPUTexture;
-    private sampler!: GPUSampler;
+
+    private modelMatrix = mat4.identity();
+    private rotation = { x: 0, y: 0, z: 0 };
+    private translation = { x: 0, y: 0, z: 0 };
 
     constructor(device: GPUDevice, color: [number, number, number, number], position: [number, number, number], radius: number) {
         this.device = device;
         this.color = new Float32Array(color);
         this.position = new Float32Array(position);
         this.radius = radius;
+        this.modelMatrix = mat4.identity();
         this.initializeBuffers();
         this.createPipeline();
     }
@@ -87,18 +95,17 @@ export class Sphere {
 
     private createUniformBuffer(): void {
         this.uniformBuffer = this.device.createBuffer({
-            size: 128,
+            size: 192,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
     }
-
-    
 
     private async createPipeline(): Promise<void> {
         const vertexShaderCode = `
             struct Uniforms {
                 viewMatrix: mat4x4<f32>,
                 projectionMatrix: mat4x4<f32>,
+                modelMatrix: mat4x4<f32>,
             };
 
             // Define the output structure for vertex shader
@@ -113,7 +120,7 @@ export class Sphere {
             @vertex
             fn vs_main(@location(0) position: vec4<f32>, @location(1) uv: vec2<f32>) -> VertexOutput {
                 var output: VertexOutput;
-                let worldPosition = vec4<f32>(position.xyz, 1.0);
+                let worldPosition = uniforms.modelMatrix * vec4<f32>(position.xyz, 1.0);
                 let viewPosition = uniforms.viewMatrix * worldPosition;
                 let clipPosition = uniforms.projectionMatrix * viewPosition;
                 output.position = clipPosition;
@@ -193,7 +200,29 @@ export class Sphere {
         });
     }
 
+    private updateUniformBuffer(){
+        const byteOffsetModelMatrix = 0; // Assuming modelMatrix is the first in the buffer.
+        // const modelMatrix = mat4.create();
+        // const byteOffsetViewMatrix = 64;
+        // const byteOffsetProjectionMatrix = 128;
+
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            byteOffsetModelMatrix,
+            this.modelMatrix.buffer,
+            this.modelMatrix.byteOffset,
+            this.modelMatrix.byteLength
+        );
+    }
+
+    rotate(axis: [number, number, number], angle: number): void {
+        const axisVec = new Float32Array(axis);
+        mat4.axisRotate(this.modelMatrix, vec3.fromValues(axisVec[0], axisVec[1], axisVec[2]), angle, this.modelMatrix);
+        this.updateUniformBuffer();
+    }
+
     draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
+        console.log(this.modelMatrix);
         this.device.queue.writeBuffer(
             this.uniformBuffer,
             0,
@@ -208,6 +237,13 @@ export class Sphere {
             camera.projectionMatrix.buffer,
             camera.projectionMatrix.byteOffset,
             camera.projectionMatrix.byteLength
+        );
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            128,
+            this.modelMatrix.buffer,
+            this.modelMatrix.byteOffset,
+            this.modelMatrix.byteLength
         );
 
         passEncoder.setPipeline(this.pipeline);
