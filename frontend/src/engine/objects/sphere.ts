@@ -30,12 +30,27 @@ export class Sphere {
         this.radius = radius;
         this.modelMatrix = mat4.identity();
         this.initializeBuffers();
+        //this.loadInitialTexture();
         this.createPipeline();
+    }
+
+    async loadInitialTexture(): Promise<void> {
+        this.texture = await loadTexture(this.device, 'base_map.jpg');
+        this.sampler = createSampler(this.device);
+        this.createBindGroup();
     }
 
     private initializeBuffers(): void {
         this.createVertexBuffer();
         this.createUniformBuffer();
+    }
+
+    async loadTextureSphere(url: string): Promise<void> {
+            this.texture = await loadTexture(this.device, url);
+            console.log(this.texture);
+            this.sampler = createSampler(this.device);
+            this.createBindGroup();
+        
     }
 
     private createVertexBuffer(): void {
@@ -181,13 +196,14 @@ export class Sphere {
             }
             
         });
-        this.createBindGroup();
+        //this.createBindGroup();
     }
 
     private async createBindGroup(): Promise<void> {
 
-        this.texture = await loadTexture(this.device, 'base_map.jpg');
-        this.sampler = createSampler(this.device);
+        //this.texture = await loadTexture(this.device, 'base_map.jpg');
+        //this.sampler = createSampler(this.device);
+        console.log("this.texture");
 
         const bindGroupLayout = this.pipeline.getBindGroupLayout(0);
         this.bindGroup = this.device.createBindGroup({
@@ -203,8 +219,8 @@ export class Sphere {
     private updateUniformBuffer(){
         const byteOffsetModelMatrix = 0; // Assuming modelMatrix is the first in the buffer.
         // const modelMatrix = mat4.create();
-        // const byteOffsetViewMatrix = 64;
-        // const byteOffsetProjectionMatrix = 128;
+        // const byteOffsetViewMatrix = ;
+        // const byteOffsetProjectionMatrix = 128; // Assuming projectionMatrix follows viewMatrix.
 
         this.device.queue.writeBuffer(
             this.uniformBuffer,
@@ -222,7 +238,7 @@ export class Sphere {
     }
 
     draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
-        console.log(this.modelMatrix);
+        //console.log(this.modelMatrix);
         this.device.queue.writeBuffer(
             this.uniformBuffer,
             0,

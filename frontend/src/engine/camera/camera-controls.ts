@@ -48,7 +48,7 @@ export class CameraControls {
 
         this.lastMouseX = event.clientX;
         this.lastMouseY = event.clientY;
-        console.log(deltaX, deltaY);
+        //console.log(deltaX, deltaY);
     }
 
     handleMouseWheel = (event: WheelEvent): void => {
