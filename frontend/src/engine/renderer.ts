@@ -2,6 +2,8 @@
 import { Scene } from './scene';
 import { Triangle } from './objects/triangle';
 import { Sphere } from './objects/sphere';
+import { Camera } from './camera/camera';
+import { CameraControls } from './camera/camera-controls';
 
 export class Renderer {
     private canvas: HTMLCanvasElement;
@@ -9,16 +11,21 @@ export class Renderer {
     private device!: GPUDevice;
     private swapChainFormat: GPUTextureFormat = 'bgra8unorm';
     private scene!: Scene;
+    private camera!: Camera;
+    private cameraControls!: CameraControls;
 
     constructor(canvasId: string) {
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         this.initializeWebGPU().then(() => {
             this.clearCanvas();
+            //initialize camera and scene
+            this.camera = new Camera([2.0, 2.0, 2.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
+            //this.camera.setPosition([0.0, 0.0, 2.0]);
+            this.cameraControls = new CameraControls(this.camera, this.canvas);
             this.scene = new Scene(this.device);
-            
             const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0]);
-            const sphere = new Sphere(this.device, [0.0, 1.0, 0.0, 1.0], [0.0, 0.0, 0.0], 0.2);
+            const sphere = new Sphere(this.device, [0.0, 1.0, 0.0, 1.0], [0.0, 0.5, 0.0], 0.2);
             this.scene.addObject(triangle);
             this.scene.addObject(triangle2);
             this.scene.addObject(sphere);
@@ -83,6 +90,11 @@ export class Renderer {
     }
 
     private render(): void {
+        //camera stuff
+        this.camera.updateViewMatrix();
+        this.camera.updateProjectionMatrix();
+        this.cameraControls.updateCameraOrbit(0.01);
+
         const commandEncoder = this.device.createCommandEncoder();
         const textureView = this.context.getCurrentTexture().createView();
 
@@ -97,7 +109,7 @@ export class Renderer {
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         
-        this.scene.draw(passEncoder);
+        this.scene.draw(passEncoder, this.camera);
         passEncoder.end();
         
         const commands = commandEncoder.finish();

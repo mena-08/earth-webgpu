@@ -1,3 +1,5 @@
+import { Camera } from "./camera/camera";
+
 // frontend/src/engine/scene.ts
 export class Scene {
     private device!: GPUDevice;
@@ -24,9 +26,9 @@ export class Scene {
         return this.objects;
     }
 
-    draw(passEncoder: GPURenderPassEncoder): void {
+    draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
         for (const obj of this.objects) {
-            obj.draw(passEncoder);
+            obj.draw(passEncoder, camera);
         }
     }
 }

@@ -1,3 +1,4 @@
+import { Camera } from "../camera/camera";
 
 
 // frontend/src/engine/Triangle.ts
@@ -6,15 +7,21 @@ export class Triangle {
     private pipeline!: GPURenderPipeline;
     private vertexBuffer!: GPUBuffer;
     private color: Float32Array;
-    private position!: Float32Array;
-    private orientation!: Float32Array;
+    private position: Float32Array;
+    private uniformBuffer!: GPUBuffer;
+    private bindGroup!: GPUBindGroup;
 
     constructor(device: GPUDevice, color: [number, number, number, number], position: [number, number, number]) {
         this.device = device;
         this.color = new Float32Array(color);
         this.position = new Float32Array(position);
-        this.createVertexBuffer();
+        this.initializeBuffers();
         this.createPipeline();
+    }
+
+    private initializeBuffers(): void {
+        this.createVertexBuffer();
+        this.createUniformBuffer();
     }
 
     private createVertexBuffer(): void {
@@ -32,24 +39,40 @@ export class Triangle {
         this.vertexBuffer.unmap();
     }
 
+    private createUniformBuffer(): void {
+        // Ensure to align and size the buffer according to WebGPU specifications
+        this.uniformBuffer = this.device.createBuffer({
+            size: 128,  //Minimum size required by WebGPU for uniform buffers
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+    }
+
     private createPipeline(): void {
         const vertexShaderCode = `
-            @vertex
-            fn vs_main(@location(0) position: vec4<f32>) -> @builtin(position) vec4<f32> {
-                return position;
-            }
-        `;
-    
+        struct Uniforms {
+    viewMatrix: mat4x4<f32>,
+    projectionMatrix: mat4x4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+@vertex
+fn vs_main(@location(0) position: vec4<f32>) -> @builtin(position) vec4<f32> {
+    let worldPosition = position;
+    let viewPosition = uniforms.viewMatrix * worldPosition;
+    let clipPosition = uniforms.projectionMatrix * viewPosition;
+    return clipPosition;
+}`;
+
         const fragmentShaderCode = `
-            @fragment
-            fn fs_main() -> @location(0) vec4<f32> {
-                return vec4<f32>(${this.color.join(',')});
-            }
-        `;
-    
+        @fragment
+        fn fs_main() -> @location(0) vec4<f32> {
+            return vec4<f32>(${this.color.join(',')});
+        }`;
+
         this.pipeline = this.device.createRenderPipeline({
             label: "triangle-pipeline",
-            layout:"auto",
+            layout: "auto",
             vertex: {
                 module: this.device.createShaderModule({
                     code: vertexShaderCode
@@ -77,12 +100,43 @@ export class Triangle {
                 topology: 'triangle-list'
             }
         });
+        this.createBindGroup();
     }
-    
 
-    draw(passEncoder: GPURenderPassEncoder): void {
+    private createBindGroup(): void {
+        const bindGroupLayout = this.pipeline.getBindGroupLayout(0);
+        this.bindGroup = this.device.createBindGroup({
+            layout: bindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: {
+                    buffer: this.uniformBuffer,
+                    size: 128
+                }
+            }]
+        });
+    }
+
+    draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
+        // Update the uniform buffer with the latest camera matrices
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            0,
+            camera.viewMatrix.buffer,
+            camera.viewMatrix.byteOffset,
+            camera.viewMatrix.byteLength
+        );
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            64,
+            camera.projectionMatrix.buffer,
+            camera.projectionMatrix.byteOffset,
+            camera.projectionMatrix.byteLength
+        );
+
         passEncoder.setPipeline(this.pipeline);
         passEncoder.setVertexBuffer(0, this.vertexBuffer);
-        passEncoder.draw(3, 1, 0, 0);
+        passEncoder.setBindGroup(0, this.bindGroup);
+        passEncoder.draw(3, 1, 0, 0);  // Draw 3 vertices (triangle)
     }
 }

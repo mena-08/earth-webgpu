@@ -1,3 +1,5 @@
+import { Camera } from "../camera/camera";
+
 // frontend/src/engine/Sphere.ts
 export class Sphere {
     private device: GPUDevice;
@@ -8,14 +10,21 @@ export class Sphere {
     private position: Float32Array;
     private radius: number = 0.5;
     private numIndices!: number;
+    private uniformBuffer!: GPUBuffer;
+    private bindGroup!: GPUBindGroup;
 
     constructor(device: GPUDevice, color: [number, number, number, number], position: [number, number, number], radius: number) {
         this.device = device;
         this.color = new Float32Array(color);
         this.position = new Float32Array(position);
         this.radius = radius;
-        this.createVertexBuffer();
+        this.initializeBuffers();
         this.createPipeline();
+    }
+
+    private initializeBuffers(): void {
+        this.createVertexBuffer();
+        this.createUniformBuffer();
     }
 
     private createVertexBuffer(): void {
@@ -73,13 +82,31 @@ export class Sphere {
         this.indexBuffer.unmap();
     }
 
+    private createUniformBuffer(): void {
+        this.uniformBuffer = this.device.createBuffer({
+            size: 128,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+    }
+
+    
+
     private createPipeline(): void {
         const vertexShaderCode = `
+            struct Uniforms {
+            viewMatrix: mat4x4<f32>,
+            projectionMatrix: mat4x4<f32>,
+            };
+
+            @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
             @vertex
             fn vs_main(@location(0) position: vec4<f32>) -> @builtin(position) vec4<f32> {
-                return position;
-            }
-        `;
+                let worldPosition = vec4<f32>(position.xyz, 1.0); // Ensure position is a 4-component vector
+                let viewPosition = uniforms.viewMatrix * worldPosition;
+                let clipPosition = uniforms.projectionMatrix * viewPosition;
+                return clipPosition;
+            }`;
 
         const fragmentShaderCode = `
             @fragment
@@ -118,12 +145,44 @@ export class Sphere {
                 topology: 'triangle-list'
             }
         });
+        this.createBindGroup();
     }
 
-    draw(passEncoder: GPURenderPassEncoder): void {
+    private createBindGroup(): void {
+        const bindGroupLayout = this.pipeline.getBindGroupLayout(0);
+        this.bindGroup = this.device.createBindGroup({
+            layout: bindGroupLayout,
+            entries: [{
+                binding: 0,
+                resource: {
+                    buffer: this.uniformBuffer,
+                    size: 128
+                }
+            }]
+        });
+    }
+
+    draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            0,
+            camera.viewMatrix.buffer,
+            camera.viewMatrix.byteOffset,
+            camera.viewMatrix.byteLength
+        );
+    
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            64,
+            camera.projectionMatrix.buffer,
+            camera.projectionMatrix.byteOffset,
+            camera.projectionMatrix.byteLength
+        );
+
         passEncoder.setPipeline(this.pipeline);
         passEncoder.setVertexBuffer(0, this.vertexBuffer);
         passEncoder.setIndexBuffer(this.indexBuffer, 'uint32');
+        passEncoder.setBindGroup(0, this.bindGroup);
         passEncoder.drawIndexed(this.numIndices);
     }
 }
