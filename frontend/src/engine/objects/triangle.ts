@@ -98,6 +98,10 @@ fn vs_main(@location(0) position: vec4<f32>) -> @builtin(position) vec4<f32> {
             },
             primitive: {
                 topology: 'triangle-list'
+            },depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: 'less',
+                format: 'depth24plus',
             }
         });
         this.createBindGroup();

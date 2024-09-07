@@ -1,6 +1,6 @@
-export async function loadTexture(device: GPUDevice, url: string): Promise<GPUTexture> {
+export async function loadTexture(device: GPUDevice, imageUrl: string): Promise<GPUTexture> {
     const img = new Image();
-    img.src = url;
+    img.src = imageUrl;
     await img.decode();
 
     const canvas = document.createElement('canvas');

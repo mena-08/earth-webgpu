@@ -38,6 +38,11 @@ export class Camera {
         this.updateProjectionMatrix();
     }
 
+    lookAt(target: [number, number, number]): void {
+        this.target = new Float32Array(target);
+        this.updateViewMatrix();
+    }
+
     setPosition(position: [number, number, number]): void {
         this.position = new Float32Array(position);
         this.updateViewMatrix();

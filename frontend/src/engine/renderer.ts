@@ -13,19 +13,21 @@ export class Renderer {
     private scene!: Scene;
     private camera!: Camera;
     private cameraControls!: CameraControls;
+    private depthTexture!: GPUTexture;
 
     constructor(canvasId: string) {
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         this.initializeWebGPU().then(() => {
             this.clearCanvas();
+            this.createDepthTexture();
             //initialize camera and scene
-            this.camera = new Camera([2.0, 2.0, 2.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
+            this.camera = new Camera([2.0, 2.0, -5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
             this.resizeCanvas();
             this.cameraControls = new CameraControls(this.camera, this.canvas);
             this.scene = new Scene(this.device);
             const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0]);
-            const sphere = new Sphere(this.device, [0.0, 1.0, 0.0, 1.0], [0.0, 0.5, 0.0], 0.2);
+            const sphere = new Sphere(this.device, [0.0, -1.0, 0.0, 1.0], [0.0, 0.0, 0.0], 0.6);
             this.scene.addObject(triangle);
             this.scene.addObject(triangle2);
             this.scene.addObject(sphere);
@@ -34,6 +36,23 @@ export class Renderer {
             console.error("Failed to initialize WebGPU:", error);
         });
     }
+
+    private createDepthTexture(): void {
+        if (this.depthTexture) {
+            this.depthTexture.destroy();
+        }
+    
+        this.depthTexture = this.device.createTexture({
+            size: {
+                width: this.canvas.width,
+                height: this.canvas.height,
+                depthOrArrayLayers: 1
+            },
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT
+        });
+    }
+
 
     private async initializeWebGPU(): Promise<void> {
         if (!navigator.gpu) {
@@ -55,7 +74,7 @@ export class Renderer {
         ];
         const configuration: GPUCanvasConfiguration = {
             device: this.device,
-            alphaMode: 'opaque',
+            alphaMode: 'premultiplied',
             format: this.swapChainFormat,
         };
         this.context.configure(configuration);
@@ -66,6 +85,7 @@ export class Renderer {
         this.canvas.height = this.canvas.clientHeight * window.devicePixelRatio;
         this.camera.setAspectRatio(this.canvas.width / this.canvas.height);
         this.camera.updateProjectionMatrix();
+        this.createDepthTexture();
     }
 
     private clearCanvas(): void {
@@ -104,6 +124,7 @@ export class Renderer {
 
         const commandEncoder = this.device.createCommandEncoder();
         const textureView = this.context.getCurrentTexture().createView();
+        const depthTextureView = this.depthTexture.createView();
 
         const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [{
@@ -111,7 +132,12 @@ export class Renderer {
                 loadOp: 'clear',
                 clearValue: { r: 0, g: 0, b: 0, a: 1 },
                 storeOp: 'store',
-            }]
+            }],depthStencilAttachment: {
+                view: depthTextureView,
+                depthLoadOp: 'clear',
+                depthClearValue: 1.0,
+                depthStoreOp: 'store',
+            }
         };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);

@@ -70,6 +70,7 @@ export class CameraControls {
     
         this.mouseDelta.x = 0;
         this.mouseDelta.y = 0;
+        this.camera.lookAt([0, 0, 0]);
     }
 
 

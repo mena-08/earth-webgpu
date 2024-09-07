@@ -1,4 +1,5 @@
 import { Camera } from "../camera/camera";
+import { createSampler, loadTexture } from "../loaders/texture-loader";
 
 // frontend/src/engine/Sphere.ts
 export class Sphere {
@@ -12,6 +13,8 @@ export class Sphere {
     private numIndices!: number;
     private uniformBuffer!: GPUBuffer;
     private bindGroup!: GPUBindGroup;
+    private texture!: GPUTexture;
+    private sampler!: GPUSampler;
 
     constructor(device: GPUDevice, color: [number, number, number, number], position: [number, number, number], radius: number) {
         this.device = device;
@@ -28,7 +31,7 @@ export class Sphere {
     }
 
     private createVertexBuffer(): void {
-        const segments = 32;
+        const segments = 128;
         const vertices = [];
         const indices = [];
 
@@ -45,11 +48,11 @@ export class Sphere {
                 const x = this.radius * cosPhi * sinTheta;
                 const y = this.radius * cosTheta;
                 const z = this.radius * sinPhi * sinTheta;
-                const nx = x;
-                const ny = y;
-                const nz = z;
+                let u = lon / segments;
+                const v = lat / segments;
+                u = 1 - u;
 
-                vertices.push(x + this.position[0], y + this.position[1], z + this.position[2], 1.0);
+                vertices.push(x + this.position[0], y + this.position[1], z + this.position[2], 1.0, u, v);
             }
         }
 
@@ -91,27 +94,41 @@ export class Sphere {
 
     
 
-    private createPipeline(): void {
+    private async createPipeline(): Promise<void> {
         const vertexShaderCode = `
             struct Uniforms {
-            viewMatrix: mat4x4<f32>,
-            projectionMatrix: mat4x4<f32>,
+                viewMatrix: mat4x4<f32>,
+                projectionMatrix: mat4x4<f32>,
             };
 
+            // Define the output structure for vertex shader
+            struct VertexOutput {
+                @builtin(position) position: vec4<f32>,
+                @location(0) uv: vec2<f32>,
+            }
+
+            // Declare the uniform buffer and other resources
             @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
             @vertex
-            fn vs_main(@location(0) position: vec4<f32>) -> @builtin(position) vec4<f32> {
-                let worldPosition = vec4<f32>(position.xyz, 1.0); // Ensure position is a 4-component vector
+            fn vs_main(@location(0) position: vec4<f32>, @location(1) uv: vec2<f32>) -> VertexOutput {
+                var output: VertexOutput;
+                let worldPosition = vec4<f32>(position.xyz, 1.0);
                 let viewPosition = uniforms.viewMatrix * worldPosition;
                 let clipPosition = uniforms.projectionMatrix * viewPosition;
-                return clipPosition;
+                output.position = clipPosition;
+                output.uv = uv; // Pass the UV coordinates to the fragment shader
+                return output;
             }`;
 
         const fragmentShaderCode = `
+            @group(0) @binding(1) var mySampler: sampler;
+            @group(0) @binding(2) var myTexture: texture_2d<f32>;
+
             @fragment
-            fn fs_main() -> @location(0) vec4<f32> {
-                return vec4<f32>(${this.color.join(',')});
+            fn fs_main(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
+                // Use the UV coordinates to sample the texture
+                return textureSample(myTexture, mySampler, uv);
             }
         `;
 
@@ -124,12 +141,19 @@ export class Sphere {
                 }),
                 entryPoint: "vs_main",
                 buffers: [{
-                    arrayStride: 4 * 4,
-                    attributes: [{
-                        shaderLocation: 0,
-                        offset: 0,
-                        format: 'float32x4'
-                    }]
+                    arrayStride: 4 * 6,
+                    attributes: [
+                        {
+                            shaderLocation: 0,
+                            offset: 0,
+                            format: 'float32x4'
+                        },
+                        {
+                            shaderLocation: 1,
+                            offset: 4 * 4,
+                            format: 'float32x2'
+                        }
+                    ]
                 }]
             },
             fragment: {
@@ -142,23 +166,30 @@ export class Sphere {
                 }]
             },
             primitive: {
-                topology: 'triangle-list'
+                topology: 'triangle-list',
+            },depthStencil: {
+                depthWriteEnabled: true,
+                depthCompare: 'less',
+                format: 'depth24plus',
             }
+            
         });
         this.createBindGroup();
     }
 
-    private createBindGroup(): void {
+    private async createBindGroup(): Promise<void> {
+
+        this.texture = await loadTexture(this.device, 'base_map.jpg');
+        this.sampler = createSampler(this.device);
+
         const bindGroupLayout = this.pipeline.getBindGroupLayout(0);
         this.bindGroup = this.device.createBindGroup({
             layout: bindGroupLayout,
-            entries: [{
-                binding: 0,
-                resource: {
-                    buffer: this.uniformBuffer,
-                    size: 128
-                }
-            }]
+            entries: [
+                { binding: 0, resource: { buffer: this.uniformBuffer } },
+                { binding: 1, resource: this.sampler },
+                { binding: 2, resource: this.texture.createView() },
+            ],
         });
     }
 

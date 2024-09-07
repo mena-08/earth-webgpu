@@ -11,9 +11,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@rollup/plugin-url": "^8.0.2",
     "@webgpu/types": "^0.1.44",
     "concurrently": "^8.2.2",
-    "rollup-plugin-string-import": "^1.2.4"
+    "rollup-plugin-string-import": "^1.2.4",
+    "rollup-plugin-url": "^3.0.1"
   },
   "dependencies": {
     "wgpu-matrix": "^3.1.0"
