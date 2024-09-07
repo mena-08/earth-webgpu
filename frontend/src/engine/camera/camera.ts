@@ -33,6 +33,11 @@ export class Camera {
         mat4.lookAt(this.position, this.target, this.up, this.viewMatrix);
     }
 
+    setAspectRatio(aspectRatio: number): void {
+        this.aspectRatio = aspectRatio;
+        this.updateProjectionMatrix();
+    }
+
     setPosition(position: [number, number, number]): void {
         this.position = new Float32Array(position);
         this.updateViewMatrix();

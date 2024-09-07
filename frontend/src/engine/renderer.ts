@@ -20,7 +20,7 @@ export class Renderer {
             this.clearCanvas();
             //initialize camera and scene
             this.camera = new Camera([2.0, 2.0, 2.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
-            //this.camera.setPosition([0.0, 0.0, 2.0]);
+            this.resizeCanvas();
             this.cameraControls = new CameraControls(this.camera, this.canvas);
             this.scene = new Scene(this.device);
             const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
@@ -59,6 +59,13 @@ export class Renderer {
             format: this.swapChainFormat,
         };
         this.context.configure(configuration);
+    }
+
+    resizeCanvas(): void {
+        this.canvas.width = this.canvas.clientWidth * window.devicePixelRatio;
+        this.canvas.height = this.canvas.clientHeight * window.devicePixelRatio;
+        this.camera.setAspectRatio(this.canvas.width / this.canvas.height);
+        this.camera.updateProjectionMatrix();
     }
 
     private clearCanvas(): void {
