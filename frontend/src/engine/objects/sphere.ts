@@ -9,7 +9,6 @@ export class Sphere {
     private vertexBuffer!: GPUBuffer;
     private indexBuffer!: GPUBuffer;
 
-    private color: Float32Array;
     private position: Float32Array;
     private radius: number = 0.5;
     private texture!: GPUTexture;
@@ -18,26 +17,28 @@ export class Sphere {
     private numIndices!: number;
     private uniformBuffer!: GPUBuffer;
     private bindGroup!: GPUBindGroup;
+    private bindGroupLayout!: GPUBindGroupLayout;
+
+    private textures: GPUTexture[] = [];
+    private earthTextures: {
+        baseMap: GPUTexture;
+        normalMap: GPUTexture;
+        specularMap: GPUTexture;
+    } | undefined
+    private currentTextureIndex = 0;
 
     private modelMatrix = mat4.identity();
     private rotation = { x: 0, y: 0, z: 0 };
     private translation = { x: 0, y: 0, z: 0 };
 
-    constructor(device: GPUDevice, color: [number, number, number, number], position: [number, number, number], radius: number) {
+    constructor(device: GPUDevice, position: [number, number, number], radius: number) {
         this.device = device;
-        this.color = new Float32Array(color);
         this.position = new Float32Array(position);
         this.radius = radius;
         this.modelMatrix = mat4.identity();
+        this.initializeBindGroupLayout();
         this.initializeBuffers();
-        //this.loadInitialTexture();
         this.createPipeline();
-    }
-
-    async loadInitialTexture(): Promise<void> {
-        this.texture = await loadTexture(this.device, 'base_map.jpg');
-        this.sampler = createSampler(this.device);
-        this.createBindGroup();
     }
 
     private initializeBuffers(): void {
@@ -45,13 +46,59 @@ export class Sphere {
         this.createUniformBuffer();
     }
 
-    async loadTextureSphere(url: string): Promise<void> {
-            this.texture = await loadTexture(this.device, url);
-            console.log(this.texture);
-            this.sampler = createSampler(this.device);
-            this.createBindGroup();
-        
+    private initializeBindGroupLayout(): void {
+        this.bindGroupLayout = this.device.createBindGroupLayout({
+            entries: [
+                { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 192 } },
+                { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+                { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+                { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+                { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+            ]
+        });
     }
+    
+
+    async loadTextures(texturePaths: string[]): Promise<void> {
+        for (const path of texturePaths) {
+            const texture = await loadTexture(this.device, path);
+            this.textures.push(texture);
+        }
+        this.earthTextures = {
+            baseMap: this.textures[0],
+            normalMap: this.textures[1],
+            specularMap: this.textures[2]
+        };
+        
+        this.sampler = createSampler(this.device);
+        this.updateBindGroup();
+    }
+
+    private updateBindGroup(): void {
+        if(!this.earthTextures){
+            console.error("Attempted to create bind group without textures or sampler initialized");
+            return;
+        }
+
+        console.log(this.earthTextures.normalMap);
+
+        if (this.sampler) {
+            const bindGroupLayout = this.pipeline.getBindGroupLayout(0);
+            this.bindGroup = this.device.createBindGroup({
+                layout: bindGroupLayout,
+                entries: [
+                    { binding: 0, resource: { buffer: this.uniformBuffer } },
+                    { binding: 1, resource: this.sampler },
+                    { binding: 2, resource: this.earthTextures.baseMap.createView() },
+                    { binding: 3, resource: this.earthTextures.normalMap.createView() },
+                    { binding: 4, resource: this.earthTextures.specularMap.createView() },
+                ],
+            });
+        } else {
+            console.error("Attempted to create bind group without textures or sampler initialized");
+        }
+    }
+
 
     private createVertexBuffer(): void {
         const segments = 128;
@@ -146,6 +193,8 @@ export class Sphere {
         const fragmentShaderCode = `
             @group(0) @binding(1) var mySampler: sampler;
             @group(0) @binding(2) var myTexture: texture_2d<f32>;
+            @group(0) @binding(3) var myNormalMap: texture_2d<f32>;
+            @group(0) @binding(4) var mySpecularMap: texture_2d<f32>;
 
             @fragment
             fn fs_main(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
@@ -155,7 +204,7 @@ export class Sphere {
         `;
 
         this.pipeline = this.device.createRenderPipeline({
-            layout:"auto",
+            layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] }),
             label: "sphere-pipeline",
             vertex: {
                 module: this.device.createShaderModule({
@@ -199,22 +248,6 @@ export class Sphere {
         //this.createBindGroup();
     }
 
-    private async createBindGroup(): Promise<void> {
-
-        //this.texture = await loadTexture(this.device, 'base_map.jpg');
-        //this.sampler = createSampler(this.device);
-        console.log("this.texture");
-
-        const bindGroupLayout = this.pipeline.getBindGroupLayout(0);
-        this.bindGroup = this.device.createBindGroup({
-            layout: bindGroupLayout,
-            entries: [
-                { binding: 0, resource: { buffer: this.uniformBuffer } },
-                { binding: 1, resource: this.sampler },
-                { binding: 2, resource: this.texture.createView() },
-            ],
-        });
-    }
 
     private updateUniformBuffer(){
         const byteOffsetModelMatrix = 0; // Assuming modelMatrix is the first in the buffer.

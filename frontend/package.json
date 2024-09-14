@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "rollup.config.js",
   "scripts": {
-  "start": "rollup -c -w",
-  "build": "rollup -c"
+    "start": "rollup -c -w",
+    "build": "rollup -c"
   },
   "keywords": [],
   "author": "",
