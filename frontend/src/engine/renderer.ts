@@ -28,14 +28,16 @@ export class Renderer {
             this.cameraControls = new CameraControls(this.camera, this.canvas);
             this.scene = new Scene(this.device);
             const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
-            const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0]);
+            const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, -1.0, 0.0]);
             const sphere = new Sphere(this.device, [0.0, -1.0, 0.0, 1.0], [0.0, 0.0, 0.0], 0.6);
-            // In some part of your event handlers or interaction logi
+            const sun = new Sphere(this.device, [0.0, -1.0, 0.0, 1.0], [10.0, 0.0, 40.0], 10);
+            sun.loadTextureSphere('sun.jpg');
             sphere.loadTextureSphere('base_map.jpg');
-            this.sphere = sphere;
+            //this.sphere = sphere;
             this.scene.addObject(triangle);
             this.scene.addObject(triangle2);
             this.scene.addObject(sphere);
+            this.scene.addObject(sun);
             this.startRenderingLoop();
         }).catch(error => {
             console.error("Failed to initialize WebGPU:", error);
