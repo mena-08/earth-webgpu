@@ -1,4 +1,6 @@
 import { Renderer } from "engine/renderer";
+import { ChatManager } from "interactions/chat-manager";
+import { sendToServer, sendToServerStreaming } from "network/endpoints";
 
 // frontend/src/main.ts
 async function checkWebGPUSupport(): Promise<boolean> {
@@ -30,7 +32,8 @@ async function checkWebGPUSupport(): Promise<boolean> {
 checkWebGPUSupport().then((supported) => {
     if (supported) {
         console.log("Loading rendering engine...");
-        const renderer = new Renderer('gpuCanvas');
+        new Renderer('gpuCanvas');
+        new ChatManager('chat-input', 'send-btn', 'messages');     
     } else {
         console.log("Rendering engine cannot be loaded due to lack of WebGPU support.");
     }

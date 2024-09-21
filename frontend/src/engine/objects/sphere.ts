@@ -1,6 +1,7 @@
 import { Camera } from "../camera/camera";
 import { createSampler, loadTexture } from "../loaders/texture-loader";
 import {vec3, mat4 } from 'wgpu-matrix';
+import { setupHLSVideoTexture } from "../loaders/texture-loader";
 
 // frontend/src/engine/Sphere.ts
 export class Sphere {
@@ -72,6 +73,31 @@ export class Sphere {
         
         this.sampler = createSampler(this.device);
         this.updateBindGroup();
+    }
+
+    async loadTexturesVideo(texturePaths: string[]): Promise<void> {
+        const promises = texturePaths.map(async (path, index) => {
+            if (path.endsWith('.m3u8')) {  // Check if the texture path is an HLS stream
+                const { texture, sampler } = await setupHLSVideoTexture(this.device, path);
+                this.textures[index] = texture;
+                if (!this.sampler) {  // Use the first video's sampler for all textures if not already set
+                    this.sampler = sampler;
+                }
+            } else {
+                const texture = await loadTexture(this.device, path);
+                this.textures[index] = texture;
+            }
+        });
+    
+        await Promise.all(promises);
+    
+        this.earthTextures = {
+            baseMap: this.textures[0],
+            normalMap: this.textures[1], 
+            specularMap: this.textures[2]
+        };
+    
+        this.updateBindGroup();  // Update the bind group after all textures are loaded
     }
 
     private updateBindGroup(): void {
@@ -264,10 +290,26 @@ export class Sphere {
         );
     }
 
+    latLongToSphereCoords(radius:number, latitude:number , longitude:number) {
+        const latRad = (latitude * Math.PI) / 180;
+        const longRad = (longitude * Math.PI) / 180;
+    
+        // Spherical to Cartesian conversion
+        const x = radius * Math.cos(latRad) * Math.cos(longRad);
+        const y = radius * Math.cos(latRad) * Math.sin(longRad);
+        const z = radius * Math.sin(latRad);
+    
+        return vec3.fromValues(-x, z, y);
+    }
+
     rotate(axis: [number, number, number], angle: number): void {
         const axisVec = new Float32Array(axis);
         mat4.axisRotate(this.modelMatrix, vec3.fromValues(axisVec[0], axisVec[1], axisVec[2]), angle, this.modelMatrix);
         this.updateUniformBuffer();
+    }
+
+    getPosition(): Float32Array {
+        return this.position;
     }
 
     draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {

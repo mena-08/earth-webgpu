@@ -63,7 +63,7 @@ app.post('/chat_stream', async (req: Request, res: Response) => {
   try {
       for await (const chunk of stream) {
           if (chunk.choices[0]?.delta?.content) {
-              res.write(`data: ${chunk.choices[0].delta.content}\n\n`);
+              res.write(`${chunk.choices[0].delta.content}\n\n`);
           }
       }
       res.end();
@@ -98,45 +98,6 @@ app.post('/audio', upload.single('file'), async (req: Request, res: Response) =>
   }
 });
 
-// app.post('/get_audio', async (req: Request, res: Response) => {
-//   const { prompt } = req.body;
-//   const speechFile = path.resolve(__dirname, './speech.mp3');
-
-//   try {
-//       // Generate speech from text
-//       const response = await openai.audio.speech.create({
-//           model: 'tts-1',
-//           voice: 'alloy',
-//           input: prompt,
-//       });
-
-//       // Stream the audio to a file
-//       await streamToFile(response.body, speechFile);
-
-//       // Send the generated audio file to the client
-//       res.sendFile(speechFile);
-//   } catch (error: any) {
-//       res.status(500).json({ error: error.message });
-//   }
-// });
-
-// /**
-//  * Streams an audio response to a file
-//  * @param {NodeJS.ReadableStream} stream - The audio stream to save
-//  * @param {fs.PathLike} path - The path to save the file to
-//  */
-// async function streamToFile(stream: NodeJS.ReadableStream, path: fs.PathLike) {
-//   return new Promise((resolve, reject) => {
-//       const writeStream = fs.createWriteStream(path)
-//           .on('error', reject)
-//           .on('finish', resolve);
-
-//       stream.pipe(writeStream).on('error', (error) => {
-//           writeStream.close();
-//           reject(error);
-//       });
-//   });
-// }
 
 
 app.listen(port, () => {

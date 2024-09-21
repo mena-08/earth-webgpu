@@ -20,7 +20,7 @@ export class Camera {
         this.position = new Float32Array(position);
         this.target = new Float32Array(target);
         this.up = new Float32Array(up);
-        this.fov = fov * Math.PI / 180; // Convert degrees to radians
+        this.fov = fov * Math.PI / 180;
         this.aspectRatio = aspectRatio;
         this.near = near;
         this.far = far;
@@ -55,5 +55,52 @@ export class Camera {
     move(direction: [number, number, number]): void {
         vec3.add(this.position, direction, this.position);
         this.updateViewMatrix();
-    }    
+    }
+
+    getCurrentPosition(): Float32Array {
+        return this.position;
+    }
+
+    setSphericalPosition(radius: number, latitude: number, longitude: number): void {
+        const latRad = (latitude * Math.PI) / 180;
+        const longRad = (longitude * Math.PI) / 180;
+
+        const targetX = 2 * Math.cos(latRad) * Math.cos(longRad);
+        const targetY = 2 * Math.cos(latRad) * Math.sin(longRad);
+        const targetZ = 2 * Math.sin(latRad);
+
+        const targetPosition = new Float32Array([-targetX, targetZ, targetY]);
+
+        const dotProduct = vec3.dot(
+            vec3.normalize(new Float32Array(this.position)), 
+            vec3.normalize(targetPosition)
+        );
+        
+        if (dotProduct < 0) {
+            const adjustmentFactor = 1.5;
+            for (let i = 0; i < targetPosition.length; i++) {
+                targetPosition[i] *= adjustmentFactor;
+            }
+        }
+
+        const interpolate = () => {
+            const speed = 0.015;
+            let change = false;
+
+            for (let i = 0; i < 3; i++) {
+                if (Math.abs(this.position[i] - targetPosition[i]) > 0.01) {
+                    this.position[i] += (targetPosition[i] - this.position[i]) * speed;
+                    change = true;
+                } else {
+                    this.position[i] = targetPosition[i];
+                }
+            }
+            this.updateViewMatrix();
+            if (change) {
+                requestAnimationFrame(interpolate);
+            }
+        };
+        requestAnimationFrame(interpolate);
+    }
+
 }

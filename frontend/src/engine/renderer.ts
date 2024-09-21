@@ -26,18 +26,25 @@ export class Renderer {
             this.camera = new Camera([2.0, 2.0, -5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
             this.resizeCanvas();
             this.cameraControls = new CameraControls(this.camera, this.canvas);
+
+            this.camera.setSphericalPosition(2.0, 35.682839, 139.759455);
+
             this.scene = new Scene(this.device);
             const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, -1.0, 0.0]);
-            const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 0.6);
-            const sun = new Sphere(this.device, [10.0, 0.0, 40.0], 10);
-            //sun.loadTextureSphere('sun.jpg');
-            sphere.loadTextures(['base_map.jpg', 'base_map_normal.jpg', 'base_map_specular.jpg']);
+            const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
+            //const smallSphere = Array.from(sphere.getPointOnSurface(Math.PI/4, Math.PI/4));
+            const smallSphere = Array.from(sphere.latLongToSphereCoords(1.0, 35.682839, 139.759455));
+            const sun = new Sphere(this.device, smallSphere as [number, number, number], 0.05);
+            sun.loadTextures(['sun.jpg', 'base_map_normal.jpg', 'base_map_specular.jpg']);
+            //sphere.loadTextures(['base_8k.jpg', 'base_map_normal.jpg', 'base_map_specular.jpg']);
+            sphere.loadTexturesVideo(['ocean/tsunamis/tsunami_global_history.m3u8', 'base_map_normal.jpg', 'base_map_specular.jpg']);
+            //this.camera.lookAt(Array.from(sun.getPosition()) as [number, number, number]);
             //this.sphere = sphere;
             this.scene.addObject(triangle);
             this.scene.addObject(triangle2);
             this.scene.addObject(sphere);
-            //this.scene.addObject(sun);
+            this.scene.addObject(sun);
             this.startRenderingLoop();
         }).catch(error => {
             console.error("Failed to initialize WebGPU:", error);

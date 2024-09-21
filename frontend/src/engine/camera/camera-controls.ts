@@ -17,7 +17,7 @@ export class CameraControls {
     }
 
     private addKeyboardListeners(): void {
-        window.addEventListener('keydown', this.handleKeyDown);
+        //window.addEventListener('keydown', this.handleKeyDown);
     }
     private addMouseListeners(): void {
         this.canvas.addEventListener('mousedown', this.handleMouseDown);
@@ -103,7 +103,7 @@ export class CameraControls {
     
         this.mouseDelta.x = 0;
         this.mouseDelta.y = 0;
-        this.camera.lookAt([0, 0, 0]);
+        //this.camera.lookAt([0, 0, 0]);
     }
 
 
@@ -134,6 +134,7 @@ export class CameraControls {
         }
         event.preventDefault();
     }
+
 
     private moveCamera(direction: [number, number, number]): void {
         this.camera.move(direction);

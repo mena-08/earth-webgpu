@@ -1,13 +1,13 @@
 html, body {
     margin: 0;
     padding: 0;
-    overflow: hidden;  /* Prevents scrolling */
-    height: 100%;      /* Ensures full viewport height */
-    width: 100%;       /* Ensures full viewport width */
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
 }
 
 canvas {
-    display: block;    /* Removes extra space below the canvas */
+    display: block;
     width: 100%;
     height: 100%;
 }
