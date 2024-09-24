@@ -18,7 +18,7 @@
     "rollup-plugin-url": "^3.0.1"
   },
   "dependencies": {
-    "hls.js": "^1.5.14-0.canary.10621",
+    "hls.js": "^1.5.14-0.canary.10629",
     "wgpu-matrix": "^3.1.0"
   }
 }

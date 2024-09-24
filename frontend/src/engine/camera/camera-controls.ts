@@ -30,10 +30,12 @@ export class CameraControls {
         this.isMouseDown = true;
         this.lastMouseX = event.clientX;
         this.lastMouseY = event.clientY;
+        
     }
 
     handleMouseUp = (): void => {
         this.isMouseDown = false;
+        console.log(this.camera.getSphericalCoordinates());
     }
 
     handleMouseMove = (event: MouseEvent): void => {
@@ -48,7 +50,6 @@ export class CameraControls {
 
         this.lastMouseX = event.clientX;
         this.lastMouseY = event.clientY;
-        //console.log(deltaX, deltaY);
     }
 
     handleMouseWheel = (event: WheelEvent): void => {

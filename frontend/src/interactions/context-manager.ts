@@ -1,51 +1,106 @@
 export class ContextManager {
-    private userContext: string = '';
-    private systemContext: string = '';
-    private fullConversation: string[] = []; // Stores the full conversation in an array for easy management
+    private context: Array<{ role: string, content: string }> = [];
+    private dataset: any = {};
+    private coordinates: string = '';
+    private prompt_engineering!: string;
 
-    constructor() {}
-
-    setInitialUserContext(context: string): void {
-        this.userContext = context;
-        this.fullConversation.push(`User: ${context}`); // Log initial user context
+    constructor() {
+        this.prompt_engineering = "You are an interactive 3D Earth visualization assistant. Provide information and display animations from the current dataset. Reply in 35 words or less, separating paragraphs naturally with dots. Only apologize if corrected.\
+	Check for correctness when interpreting prompts, ignore typos, and complete information based on context. Omit mentioning inability to do things. Share only relevant context to the last prompt, no need to repeat titles or specific terms frequently. Use the metric system without abbreviations. Be friendly and concise, focusing on answering what is asked.\
+	You have the following datasets: Loggerhead Sea Turtles Track, Phytoplankton model, Sea Surface Temperature NOAA. This is are your current coordinates. Just in case the user asks something related to what region or specific place is seeing:"
+        this.setInitialSystemContext(this.prompt_engineering);
+        this.setDatasetFromString('http://localhost:3000/ocean/turtles/loggerhead_sea_turtles_track.txt');
     }
 
-    setInitialSystemContext(context: string): void {
-        this.systemContext = context;
-        this.fullConversation.push(`System: ${context}`); // Log initial system context
+    setInitialUserContext(content: string): void {
+        this.addText('user', content);
     }
 
-    updateUserContext(update: string): void {
-        this.userContext += "\n" + update;
-        this.fullConversation.push(`User: ${update}`); // Append each new user message
+    setInitialSystemContext(content: string): void {
+        this.addText('system', content);
     }
 
-    updateSystemContext(update: string): void {
-        this.systemContext += "\n" + update;
-        this.fullConversation.push(`System: ${update}`); // Append each new system response
+    updateUserContext(content: string): void {
+        this.addText('user', content);
     }
 
-    getUserContext(): string {
-        return this.userContext;
+    updateSystemContext(content: string): void {
+        this.addText('system', content);
     }
 
-    getSystemContext(): string {
-        return this.systemContext;
+    addText(role: string, content: string): void {
+        this.context.push({ role, content });
+    }
+
+    updateSystemContextWithCoordinates(): void {
+        const fullSystemContext = `${this.context}\nCoordinates: ${this.coordinates}`;
+        this.setInitialSystemContext(fullSystemContext);
+    }
+
+    setCoordinates(lat: number, lon: number): void {
+        this.coordinates = `Latitude: ${lat.toFixed(4)}, Longitude: ${lon.toFixed(4)}`;
+        this.updateSystemContextWithCoordinates();
+    }
+
+    setDatasetFromString(url: string): void {
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(jsonString => {
+                try {
+                    this.dataset = JSON.parse(jsonString);
+                    const datasetTitle = this.dataset.title || "Untitled Dataset";
+                    console.log("Dataset Title:", datasetTitle);
+                    this.updateContextWithDataset();
+                } catch (error) {
+                    console.error("Invalid JSON string", error);
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching or parsing dataset", error);
+            });
+    }
+
+    updateContextWithDataset(): void {
+        const datasetEntries = Object.entries(this.dataset)
+            .map(([key, value]) => {
+                if (typeof value === 'object' && value !== null) {
+                    return `${key}: ${JSON.stringify(value, null, 2)}`;
+                }
+                return `${key}: ${value}`;
+            })
+            .join(". ");
+
+        const datasetSummary = `Current Dataset: ${datasetEntries}`;
+        this.addText('system', datasetSummary);
     }
 
     getFullConversation(): string[] {
-        return this.fullConversation; // Returns the full conversation history
+        return this.context.map(entry => {
+            if (entry.role === 'system') {
+                const cleanedContent = entry.content.replace(/\n/g, '');
+                return `${entry.role}: ${cleanedContent}`;
+            }
+            return `${entry.role}: ${entry.content}`;
+        });
     }
+    
 
-    // Prepares the conversation history for sending to the endpoint
-    getFormattedConversationForAPI(): string {
-        return this.fullConversation.join('\n');
-    }
-
-    // Reset the context and conversation for a new session or interaction
     resetConversation(): void {
-        this.userContext = '';
-        this.systemContext = '';
-        this.fullConversation = [];
+        this.context = [];
+        this.dataset = {};
+    }
+
+
+    getDataset(): any {
+        return this.dataset;
+    }
+
+    getDatasetTitle(): string {
+        return this.dataset.title || "No Title";
     }
 }

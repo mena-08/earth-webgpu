@@ -19,32 +19,32 @@ export class Renderer {
 
     constructor(canvasId: string) {
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+        this.camera = new Camera([2.0, 2.0, -5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
         this.initializeWebGPU().then(() => {
             this.clearCanvas();
             this.createDepthTexture();
             //initialize camera and scene
-            this.camera = new Camera([2.0, 2.0, -5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
             this.resizeCanvas();
             this.cameraControls = new CameraControls(this.camera, this.canvas);
-
-            this.camera.setSphericalPosition(2.0, 35.682839, 139.759455);
+            
+            //this.camera.setSphericalPosition(2.0, 35.682839, 139.759455);
 
             this.scene = new Scene(this.device);
-            const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
-            const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, -1.0, 0.0]);
+            //const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
+            //const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, -1.0, 0.0]);
             const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
             //const smallSphere = Array.from(sphere.getPointOnSurface(Math.PI/4, Math.PI/4));
             const smallSphere = Array.from(sphere.latLongToSphereCoords(1.0, 35.682839, 139.759455));
             const sun = new Sphere(this.device, smallSphere as [number, number, number], 0.05);
             sun.loadTextures(['sun.jpg', 'base_map_normal.jpg', 'base_map_specular.jpg']);
             //sphere.loadTextures(['base_8k.jpg', 'base_map_normal.jpg', 'base_map_specular.jpg']);
-            sphere.loadTexturesVideo(['ocean/tsunamis/tsunami_global_history.m3u8', 'base_map_normal.jpg', 'base_map_specular.jpg']);
+            sphere.loadTexturesVideo(['ocean/tsunami_samoa/tsunami_samoa.m3u8', 'base_map_normal.jpg', 'base_map_specular.jpg']);
             //this.camera.lookAt(Array.from(sun.getPosition()) as [number, number, number]);
             //this.sphere = sphere;
-            this.scene.addObject(triangle);
-            this.scene.addObject(triangle2);
+            //this.scene.addObject(triangle);
+            //this.scene.addObject(triangle2);
             this.scene.addObject(sphere);
-            this.scene.addObject(sun);
+            //this.scene.addObject(sun);
             this.startRenderingLoop();
         }).catch(error => {
             console.error("Failed to initialize WebGPU:", error);
@@ -102,6 +102,10 @@ export class Renderer {
         this.createDepthTexture();
     }
 
+    getCamera(): Camera {
+        return this.camera;
+    }
+
     private clearCanvas(): void {
         const commandEncoder = this.device.createCommandEncoder();
         const textureView = this.context.getCurrentTexture().createView();
@@ -135,6 +139,7 @@ export class Renderer {
         this.camera.updateViewMatrix();
         this.camera.updateProjectionMatrix();
         this.cameraControls.updateCameraOrbit(0.01);
+        //console.log(this.camera.getSphericalCoordinates());
 
         //try rotation stuff
         // const timestamp = performance.now();

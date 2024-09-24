@@ -1,4 +1,4 @@
-export async function sendToServer(message: string): Promise<void> {
+export async function sendToServer(message: string): Promise<string> {
     try {
         const response = await fetch('http://localhost:3000/chat', {
             method: 'POST',
@@ -7,7 +7,10 @@ export async function sendToServer(message: string): Promise<void> {
             },
             body: JSON.stringify({
                 prompt: message,
-                conversation: [{ role: 'user', content: '' }]
+                conversation: [
+                    { role: 'system', content: 'Youre a black magician and are casting a spell. Reply very shortly' },
+                    { role: 'user', content: message }
+                ]
             })
         });
 
@@ -17,15 +20,18 @@ export async function sendToServer(message: string): Promise<void> {
 
         const data = await response.json();
         console.log('Response received:', data);
-
-        // Assuming the response contains a 'reply' field
-        console.log(data.reply, 'GPT');
+        return data.reply;
     } catch (error) {
         console.error('Error sending message:', error);
+        throw error;
     }
 }
 
-export async function sendToServerStreaming(message: string, context: string): Promise<void> {
+export async function sendToServerStreaming(message: string, context: string[]): Promise<string> {
+    let allMessages = '';
+
+    const updatedConversation = [...context.map(content => ({ role: 'system', content })), { role: 'user', content: message }];
+
     try {
         const response = await fetch('http://localhost:3000/chat_stream', {
             method: 'POST',
@@ -34,7 +40,7 @@ export async function sendToServerStreaming(message: string, context: string): P
             },
             body: JSON.stringify({
                 prompt: message,
-                conversation: [{ role: 'system', content: context }]
+                conversation: updatedConversation
             })
         });
 
@@ -58,35 +64,14 @@ export async function sendToServerStreaming(message: string, context: string): P
             }
             const chunk = new TextDecoder("utf-8").decode(value);
             const cleanedChunk = chunk;
+            allMessages += cleanedChunk;
             const words = cleanedChunk.split(' ');
-            words[0] = leftover + words[0]; // Prepend leftover to the first word
-            leftover = words.pop() || ''; // Save the last potentially incomplete word
-
-            const completeData = words.join(' ');
-            // Check if first chunk to initialize message container
-            if (isFirstChunk) {
-                messageContainer = initializeGPTMessageContainer();
-                isFirstChunk = false;
-            }
-            
-            // Display each chunk in the GPT message bubble
-            if (messageContainer) {
-                messageContainer.textContent += completeData;
-            }
+            words[0] = leftover + words[0];
+            leftover = words.pop() || ''; 
         }
+        
     } catch (error) {
         console.error('Error sending message:', error);
     }
-}
-
-function initializeGPTMessageContainer(): HTMLElement {
-    const messages_container = document.getElementById('messages');
-    if (!messages_container) {
-        console.error('Error: messages_container is null');
-        throw new Error('Message container not found');
-    }
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message-bubble-GPT';
-    messages_container.appendChild(messageDiv);
-    return messageDiv;
+    return allMessages;
 }

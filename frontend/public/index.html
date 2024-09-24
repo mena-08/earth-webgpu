@@ -12,11 +12,14 @@
     <div id="chat-container">
         <div id="chat-box">
             <div id="messages"></div>
-            <input type="text" id="chat-input" placeholder="How can I help you?...">
-            <button type="button" id="send-btn">Send</button>
-            <button type="button" id="record-btn" class="stopped">Record</button>
+            <div id="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Type a message...">
+                <button type="button" id="send-btn">Send</button>
+                <button type="button" id="record-btn" class="stopped">Record</button>
+            </div>
         </div>
     </div>
+    <button type="button" id="download-interactions">Download Interactions</button>
     <canvas id="gpuCanvas"></canvas>    
     <script src="bundle.js"></script>
 </body>

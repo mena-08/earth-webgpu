@@ -1,0 +1,51 @@
+{
+"currentDataset": {
+"title": "Sea Surface Temperature (SST) - NOAA Model Simulation",
+"id": "sea_surface_temperature_noaa",
+"description": "This dataset showcases variations in global sea surface temperatures over several years, highlighting the effects of seasonal cycles, surface ocean currents, and eddies that transport heat and water across the globe. The dataset is generated from NOAA's GFDL state-of-the-art climate model, providing a simulated view of SST patterns rather than observations.",
+"tags": [
+"sea surface temperature",
+"SST",
+"climate model",
+"ocean currents",
+"NOAA",
+"GFDL",
+"global warming",
+"climate system"
+],
+"visual_cues": {
+"colors": {
+"warmest_SST": "Red to Black (>30°C)",
+"moderately_warm_SST": "Yellow to Green (~20°C)",
+"cool_SST": "Light Blue (~10°C)",
+"cold_SST": "Dark Blue to White (0°C or lower)"
+},
+"color_scale": {
+"red_to_black": "Indicates the hottest sea surface temperatures, typically found in equatorial regions and major warm currents like the Gulf Stream and Kuroshio Current.",
+"yellow_to_green": "Represents moderately warm temperatures, often found in subtropical regions and temperate ocean waters.",
+"light_blue": "Depicts cooler surface temperatures, usually in mid-latitudes or cooler currents moving towards the equator.",
+"dark_blue_to_white": "Shows the coldest temperatures near the poles, in regions influenced by cold currents or during winter months."
+},
+"key_areas": {
+"tropical_warm_currents": "Notable currents like the Gulf Stream in the Atlantic and the Kuroshio Current in the Pacific transport warm surface water poleward, depicted in red to black.",
+"cool_currents": "Cooler surface currents moving equatorward are shown in blue hues, typically near the western boundaries of ocean basins."
+}
+},
+"model_data": {
+"model_name": "GFDL CM2.5v1",
+"producer": "NOAA Geophysical Fluid Dynamics Laboratory (GFDL) Climate Change, Variability, and Prediction Group",
+"model_type": "3D Numerical Climate Model",
+"description": "The GFDL CM2.5v1 is a comprehensive climate model that simulates the interaction between the atmosphere, ocean, land surface, and sea ice. It is used to improve our understanding of Earth's climate system over various time scales, from seasonal to centennial."
+},
+"key_points": {
+"seasonal_migration": "The warmest and coldest SST regions migrate northward and southward with the seasons, influenced by the Earth's tilt and orbit around the Sun.",
+"current_dynamics": "Ocean currents, such as the Gulf Stream and Kuroshio Current, transport heat poleward while generating eddies along their edges, which also contribute to heat transport.",
+"oceanic_influence": "Surface currents are driven by winds, the Earth's rotation, and internal ocean dynamics, playing a crucial role in the global climate system."
+},
+"sources": [
+"NOAA Geophysical Fluid Dynamics Laboratory (GFDL)",
+"GFDL Climate Change, Variability, and Prediction Group",
+"http://www.gfdl.noaa.gov/climate-modeling"
+]
+}
+}

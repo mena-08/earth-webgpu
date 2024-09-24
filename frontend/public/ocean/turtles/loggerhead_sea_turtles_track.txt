@@ -1,0 +1,59 @@
+{
+  "currentDataset": {
+    "title": "Juvenile Loggerhead Sea Turtle Tracking Dataset",
+    "id": "loggerhead_sea_turtles_track",
+    "description": "Dataset of juvenile loggerhead sea turtles tagged and monitored from 1997-2006. Turtles either caught near Hawaii or raised at Port of Nagoya Aquarium, Japan, were released at various sea locations. The dataset visualizes daily turtle movements against sea surface temperature (SST) climatology, with turtle size proportional to length.",
+    "tags": [
+      "sea turtles",
+      "loggerhead",
+      "wildlife tracking",
+      "marine biology",
+      "satellite tagging",
+      "climatology",
+      "sea surface temperature",
+      "migration patterns"
+    ],
+    "species": "Loggerhead sea turtles (Caretta caretta)",
+    "tracking_period": "1997-2006",
+    "locations": [
+      {
+        "region": "North Pacific",
+        "coordinates": {
+          "north": "Hawaii",
+          "west": "Kuroshio Extension, Japan"
+        }
+      }
+    ],
+    "climate_data": {
+      "background": "Sea surface temperature (SST) climatology",
+      "temperature_range": "11.0°C - 29°C",
+      "preferred_temperature": "18°C - 19°C",
+      "color_mapping": {
+        "cooler_temps": {
+          "range": "below 17°C",
+          "color": "blue"
+        },
+        "preferred_temps": {
+          "range": "18°C - 19°C",
+          "color": "green and yellow zones"
+        },
+        "warmer_temps": {
+          "range": "above 18°C",
+          "color": "yellow to orange/reddish"
+        }
+      }
+    },
+    "key_points": {
+      "migration": "Turtles follow temperature bands, migrating seasonally",
+      "habitat_hotspots": "Kuroshio Extension Current, Japan",
+      "thermal_habitat": "Below 18°C",
+      "fisherman_guidance": "Avoid turtle zones (red/blue) via TurtleWatch maps"
+    },
+    "conservation_status": "Endangered (ESA - Endangered Species Act)",
+    "future_projection": {
+      "study_period": "2009-2018",
+      "findings": "Projected habitat shift northwards due to climate change; increased habitat and seasonal duration expected on the northwestern U.S. shelf"
+    },
+    "source": "NOAA, National Marine Fisheries Service, PIFSC Ecosystem Sciences Division"
+  }
+}

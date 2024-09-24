@@ -1,118 +1,77 @@
-
-// import { sendToServerStreaming } from '../network/endpoints';
-
-// export class ChatManager {
-//     private inputElement: HTMLInputElement;
-//     private sendButton: HTMLButtonElement;
-//     private messagesContainer: HTMLDivElement;
-
-//     constructor(inputId: string, buttonId: string, containerId: string) {
-//         this.inputElement = document.getElementById(inputId) as HTMLInputElement;
-//         this.sendButton = document.getElementById(buttonId) as HTMLButtonElement;
-//         this.messagesContainer = document.getElementById(containerId) as HTMLDivElement;
-
-//         this.setupListeners();
-//     }
-
-//     private setupListeners() {
-//         this.sendButton.addEventListener('click', () => this.sendMessage().catch(console.error));
-//         this.inputElement.addEventListener('keypress', async (event: KeyboardEvent) => {
-//             if (event.key === 'Enter') {
-//                 event.preventDefault();
-//                 this.displayUserMessage(this.inputElement.value);
-//                 await this.sendMessage().catch(console.error);
-//             }
-//         });
-//     }
-
-//     private async sendMessage(): Promise<void> {
-//         const message = this.inputElement.value.trim();
-//         if (message) {
-//             console.log(`Message sent: ${message}`);
-//             this.inputElement.value = '';
-//             await sendToServerStreaming(message);
-//         }
-//     }
-
-//     private displayUserMessage(message:string) {
-//         const messages_container = document.getElementById('messages');
-//         const new_message_div = document.createElement('div');
-//         new_message_div.className = 'message-bubble';
-//         new_message_div.textContent = message + "\n";
-//         if (messages_container) {
-//             messages_container.appendChild(new_message_div);
-//         } else {
-//             console.error('Error: messages_container is null');
-//         }
-//     }
-// }
-
-// function displayGPTMessage(message:string) {
-// 	const messages_container = document.getElementById('messages');
-//     if (!messages_container) {
-//         console.error('Error: messages_container is null');
-//         return;
-//     }
-//     let last_message_div = messages_container.lastElementChild;
-
-// 	if (!last_message_div || last_message_div.className !== 'message-bubble-GPT') {
-// 		last_message_div = document.createElement('div');
-// 		last_message_div.className = 'message-bubble-GPT';
-//         if (messages_container) {
-//             messages_container.appendChild(last_message_div);
-//         } else {
-//             console.error('Error: messages_container is null');
-//         }
-// 	}
-// 	last_message_div.textContent += message;
-// }
-
-
 import { ContextManager } from './context-manager';
-import { sendToServerStreaming } from '../network/endpoints';
+import { sendToServerStreaming, sendToServer } from '../network/endpoints';
+import { Camera } from 'engine/camera/camera';
+
 
 export class ChatManager {
     private inputElement: HTMLInputElement;
     private sendButton: HTMLButtonElement;
     private messagesContainer: HTMLDivElement;
     private contextManager: ContextManager;
+    private camera!: Camera;
 
-    constructor(inputId: string, buttonId: string, containerId: string) {
+    constructor(inputId: string, buttonId: string, containerId: string, camera: Camera) {
+        this.camera = camera;
+        console.log(this.camera);
         this.inputElement = document.getElementById(inputId) as HTMLInputElement;
         this.sendButton = document.getElementById(buttonId) as HTMLButtonElement;
         this.messagesContainer = document.getElementById(containerId) as HTMLDivElement;
-        this.contextManager = new ContextManager(); // Initialize ContextManager
-
+        this.contextManager = new ContextManager();
+        //this.contextManager.setDatasetFromString;
         this.setupListeners();
     }
 
     private setupListeners() {
-        this.sendButton.addEventListener('click', () => this.sendMessage().catch(console.error));
+        this.sendButton.addEventListener('click', () => {
+            this.sendMessageAndInstruction().catch(console.error);
+        });
+    
         this.inputElement.addEventListener('keypress', async (event: KeyboardEvent) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
                 this.displayUserMessage(this.inputElement.value);
-                await this.sendMessage().catch(console.error);
+                await this.sendMessageAndInstruction().catch(console.error);
             }
         });
     }
+    
+    private async sendMessageAndInstruction() {
+        await Promise.all([
+            this.sendInstruction(),
+            this.sendMessage()
+        ]);
+    }
+    
 
     private async sendMessage(): Promise<void> {
         const message = this.inputElement.value.trim();
+        this.getCameraContext();
         if (message) {
-            console.log(`Message sent: ${message}`);
+            //console.log(`Message sent: ${message}`);
             this.inputElement.value = '';
             this.contextManager.updateUserContext(message);
 
             try {
-                const response = await sendToServerStreaming(message, this.contextManager.getFormattedConversationForAPI());
-                // Handle response and update system context
-                console.log("System's response:", response);
-                //this.contextManager.updateSystemContext(response); // Assuming response is directly the text from the system
-                //this.displaySystemMessage(response); // Display system's response in the UI
+                const response = await sendToServerStreaming(message, this.contextManager.getFullConversation());
+                this.contextManager.updateSystemContext(response);
+                this.displaySystemMessage(response);
             } catch (error) {
                 console.error('Error sending message:', error);
             }
+
+        }
+    }
+
+    private async sendInstruction(): Promise<void> {
+        const message = this.inputElement.value.trim();
+        if (message) {
+            try {
+                const response = await sendToServer(message);
+                console.log(response);
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+
         }
     }
 
@@ -120,14 +79,29 @@ export class ChatManager {
     private displayUserMessage(message: string) {
         const new_message_div = document.createElement('div');
         new_message_div.className = 'message-bubble';
-        new_message_div.textContent = message + "\n";
+        new_message_div.textContent ="Me: "+ message + "\n";
         this.messagesContainer.appendChild(new_message_div);
+        this.scrollToBottom();
+        console.log(this.contextManager.getFullConversation());
     }
 
     private displaySystemMessage(message: string) {
         const new_message_div = document.createElement('div');
         new_message_div.className = 'message-bubble-GPT';
-        new_message_div.textContent = message + "\n";
+        new_message_div.textContent ="GPT: "+ message + "\n";
+        this.scrollToBottom();
         this.messagesContainer.appendChild(new_message_div);
+    }
+
+    private scrollToBottom() {
+        const messagesContainer = document.getElementById('messages');
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }
+
+    private getCameraContext() {
+        console.log(this.camera);
+        this.contextManager.setCoordinates(this.camera.getSphericalCoordinates().latitude, this.camera.getSphericalCoordinates().longitude);
     }
 }

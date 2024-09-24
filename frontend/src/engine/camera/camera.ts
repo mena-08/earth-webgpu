@@ -61,6 +61,23 @@ export class Camera {
         return this.position;
     }
 
+    getSphericalCoordinates(): { latitude: number, longitude: number } {
+        const x = this.position[0];
+        const y = this.position[2];
+        const z = this.position[1];
+    
+        // Radius is derived from the x, y, and z coordinates
+        const radius = Math.sqrt(x * x + y * y + z * z);
+    
+        // Latitude is derived from the z-coordinate
+        const latitude = Math.asin(z / radius) * (180 / Math.PI);
+    
+        // Longitude is derived from the x and y coordinates
+        const longitude = Math.atan2(y, -x) * (180 / Math.PI);
+    
+        return { latitude, longitude };
+    }
+
     setSphericalPosition(radius: number, latitude: number, longitude: number): void {
         const latRad = (latitude * Math.PI) / 180;
         const longRad = (longitude * Math.PI) / 180;
