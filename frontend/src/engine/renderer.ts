@@ -27,24 +27,12 @@ export class Renderer {
             this.resizeCanvas();
             this.cameraControls = new CameraControls(this.camera, this.canvas);
             
-            //this.camera.setSphericalPosition(2.0, 35.682839, 139.759455);
-
             this.scene = new Scene(this.device);
-            //const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
-            //const triangle2 = new Triangle(this.device, [1.0, 0.0, 1.0, 1.0], [0.0, -1.0, 0.0]);
+            const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
-            //const smallSphere = Array.from(sphere.getPointOnSurface(Math.PI/4, Math.PI/4));
-            const smallSphere = Array.from(sphere.latLongToSphereCoords(1.0, 35.682839, 139.759455));
-            const sun = new Sphere(this.device, smallSphere as [number, number, number], 0.05);
-            sun.loadTextures(['sun.jpg', 'base_map_normal.jpg', 'base_map_specular.jpg']);
-            //sphere.loadTextures(['base_8k.jpg', 'base_map_normal.jpg', 'base_map_specular.jpg']);
-            sphere.loadTexturesVideo(['ocean/tsunami_samoa/tsunami_samoa.m3u8', 'base_map_normal.jpg', 'base_map_specular.jpg']);
-            //this.camera.lookAt(Array.from(sun.getPosition()) as [number, number, number]);
-            //this.sphere = sphere;
+            sphere.loadTexturesVideo(['ocean/turtles/loggerhead_sea_turtles_track.m3u8', 'base_map_normal.jpg', 'base_map_specular.jpg']);
             //this.scene.addObject(triangle);
-            //this.scene.addObject(triangle2);
             this.scene.addObject(sphere);
-            //this.scene.addObject(sun);
             this.startRenderingLoop();
         }).catch(error => {
             console.error("Failed to initialize WebGPU:", error);
@@ -138,17 +126,7 @@ export class Renderer {
         //camera stuff
         this.camera.updateViewMatrix();
         this.camera.updateProjectionMatrix();
-        this.cameraControls.updateCameraOrbit(0.01);
-        //console.log(this.camera.getSphericalCoordinates());
-
-        //try rotation stuff
-        // const timestamp = performance.now();
-        // const deltaTime = (timestamp - this.lastRenderTime) / 1000;
-        // this.lastRenderTime = timestamp;
-
-        // const rotationSpeed = Math.PI / 10; // Rotation speed (radians per second)
-        // const angle = rotationSpeed * deltaTime;
-        // this.sphere.rotate([0, 1, 0], angle);
+        this.cameraControls.updateCameraOrbit(0.01);        
 
         const commandEncoder = this.device.createCommandEncoder();
         const textureView = this.context.getCurrentTexture().createView();
@@ -178,3 +156,17 @@ export class Renderer {
     }
 
 }
+
+//This could help camera setting stuff
+//this.camera.setSphericalPosition(2.0, 35.682839, 139.759455);
+//const smallSphere = Array.from(sphere.getPointOnSurface(Math.PI/4, Math.PI/4));
+//this.camera.lookAt(Array.from(sun.getPosition()) as [number, number, number]);
+
+//This could helpr with rotation of objects
+// const timestamp = performance.now();
+// const deltaTime = (timestamp - this.lastRenderTime) / 1000;
+// this.lastRenderTime = timestamp;
+
+// const rotationSpeed = Math.PI / 10; // Rotation speed (radians per second)
+// const angle = rotationSpeed * deltaTime;
+// this.sphere.rotate([0, 1, 0], angle);

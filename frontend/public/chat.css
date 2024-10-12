@@ -37,7 +37,6 @@
 .message-bubble {
     background: linear-gradient(145deg, #6b6a6a, #555555); /* Gradient for user messages */
     margin-left: auto; /* Aligns user messages to the right */
-    text-align: right; /* Aligns text inside the bubble to the right */
 }
 
 .message-bubble-GPT {
@@ -103,7 +102,7 @@
 /* Messages container styling */
 #messages {
     overflow-y: auto;
-    height: 250px; /* Increased height */
+    height: 600px; /* Increased height */
 }
 
 /* Custom scrollbar for messages */
