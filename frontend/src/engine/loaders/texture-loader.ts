@@ -10,7 +10,11 @@ export async function loadTexture(device: GPUDevice, imageUrl: string): Promise<
     canvas.height = img.height;
 
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
+    if (ctx) {
+        ctx.drawImage(img, 0, 0);
+    } else {
+        throw new Error('Failed to get 2D context');
+    }
     const imageData = ctx.getImageData(0, 0, img.width, img.height);
 
     const texture = device.createTexture({
@@ -29,65 +33,6 @@ export async function loadTexture(device: GPUDevice, imageUrl: string): Promise<
     return texture;
 }
 
-export function createSampler(device: GPUDevice): GPUSampler {
-    return device.createSampler({
-        magFilter: 'linear',
-        minFilter: 'linear',
-        addressModeU: 'repeat',
-        addressModeV: 'repeat',
-    });
-}
-
-// export async function setupHLSVideoTexture(device:GPUDevice, videoUrl:string) {
-//     const video = document.createElement('video');
-//     video.crossOrigin = "anonymous";
-//     video.autoplay = true;
-//     video.muted = true;
-//     video.loop = true;
-
-//     if (video.canPlayType('application/vnd.apple.mpegurl') === '') {
-//         const hls = new Hls();
-//         hls.loadSource(videoUrl);
-//         hls.attachMedia(video);
-//     } else {
-//         video.src = videoUrl;
-//     }
-
-//     await new Promise((resolve) => video.onloadedmetadata = resolve);
-
-//     const canvas = document.createElement('canvas');
-//     canvas.width = video.videoWidth;
-//     canvas.height = video.videoHeight;
-
-//     const texture = device.createTexture({
-//         size: { width: video.videoWidth, height: video.videoHeight, depthOrArrayLayers: 1 },
-//         format: 'rgba8unorm',
-//         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
-//     });
-
-//     const sampler = createSampler(device);
-
-//     function updateTexture() {
-//         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-//         ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-//         const imageData = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight);
-
-//         device.queue.writeTexture(
-//             { texture: texture },
-//             imageData.data,
-//             { bytesPerRow: 4 * video.videoWidth },
-//             { width: video.videoWidth, height: video.videoHeight, depthOrArrayLayers: 1 }
-//         );
-
-//         requestAnimationFrame(updateTexture);
-//     }
-
-//     video.play().then(() => {
-//         updateTexture(); // Start updating texture after the video starts playing
-//     });
-
-//     return { texture, sampler };
-// }
 
 export async function setupHLSVideoTexture(device: GPUDevice, videoUrl: string) {
     const video = document.createElement('video');
@@ -113,7 +58,7 @@ export async function setupHLSVideoTexture(device: GPUDevice, videoUrl: string) 
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
     });
 
-    const sampler = createSampler(device);
+    const sampler = createSampler(device, 'video');
 
     function updateTexture() {
 
@@ -128,15 +73,19 @@ export async function setupHLSVideoTexture(device: GPUDevice, videoUrl: string) 
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            const imageData = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight);
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+                const imageData = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight);
 
-            device.queue.writeTexture(
-                { texture: texture },
-                imageData.data,
-                { bytesPerRow: 4 * video.videoWidth },
-                { width: video.videoWidth, height: video.videoHeight, depthOrArrayLayers: 1 }
-            );
+                device.queue.writeTexture(
+                    { texture: texture },
+                    imageData.data,
+                    { bytesPerRow: 4 * video.videoWidth },
+                    { width: video.videoWidth, height: video.videoHeight, depthOrArrayLayers: 1 }
+                );
+            } else {
+                console.error('Failed to get 2D context');
+            }
         }
         requestAnimationFrame(updateTexture);
     }
@@ -146,4 +95,27 @@ export async function setupHLSVideoTexture(device: GPUDevice, videoUrl: string) 
     });
 
     return { texture, sampler };
+}
+
+
+export function createSampler(device: GPUDevice, type: 'static' | 'video'): GPUSampler {
+    if (type === 'video') {
+        //sampler optimized for video textures
+        return device.createSampler({
+            magFilter: 'nearest',
+            minFilter: 'nearest',
+            mipmapFilter: 'nearest',
+            addressModeU: 'clamp-to-edge',
+            addressModeV: 'clamp-to-edge'
+        });
+    } else {
+        return device.createSampler({
+            magFilter: 'linear',
+            minFilter: 'linear',
+            mipmapFilter: 'linear',
+            addressModeU: 'repeat',
+            addressModeV: 'repeat',
+            maxAnisotropy: 16 
+        });
+    }
 }

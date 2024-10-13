@@ -1,3 +1,13 @@
+/**
+ * The above functions in TypeScript send messages to a server for processing, with the second function
+ * supporting streaming responses.
+ * @param {string} message - The `message` parameter in both `sendToServer` and `sendToServerStreaming`
+ * functions represents the text message that you want to send to the server for processing. It could
+ * be a user input or a prompt for a conversation.
+ * @returns The `sendToServer` function returns the reply received from the server as a string. The
+ * `sendToServerStreaming` function returns all the messages received from the server during the
+ * streaming process as a single concatenated string.
+ */
 export async function sendToServer(message: string): Promise<string> {
     try {
         const response = await fetch('http://localhost:3000/chat', {

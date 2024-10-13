@@ -1,3 +1,10 @@
+/**
+ * The function `checkWebGPUSupport` checks for WebGPU support and initializes a rendering engine if
+ * supported.
+ * @returns The `checkWebGPUSupport` function returns a Promise that resolves to a boolean value
+ * indicating whether WebGPU is supported on the device or not. If WebGPU is supported, it returns
+ * `true`, otherwise it returns `false`.
+ */
 import { Renderer } from "engine/renderer";
 import { ChatManager } from "interactions/chat-manager";
 

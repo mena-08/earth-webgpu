@@ -3,6 +3,8 @@ import { sendToServerStreaming, sendToServer } from '../network/endpoints';
 import { Camera } from 'engine/camera/camera';
 
 
+/* The `ChatManager` class manages a chat interface by sending and displaying messages between a user
+and a server, updating conversation context, and handling user interactions. */
 export class ChatManager {
     private inputElement: HTMLInputElement;
     private sendButton: HTMLButtonElement;
@@ -45,9 +47,8 @@ export class ChatManager {
 
     private async sendMessage(): Promise<void> {
         const message = this.inputElement.value.trim();
-        this.getCameraContext();
+        //this.getCameraContext();
         if (message) {
-            //console.log(`Message sent: ${message}`);
             this.inputElement.value = '';
             this.contextManager.updateUserContext(message);
 
@@ -99,7 +100,7 @@ export class ChatManager {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
-
+    
     private getCameraContext() {
         console.log(this.camera);
         this.contextManager.setCoordinates(this.camera.getSphericalCoordinates().latitude, this.camera.getSphericalCoordinates().longitude);

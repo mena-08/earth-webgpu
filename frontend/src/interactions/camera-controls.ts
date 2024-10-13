@@ -1,5 +1,4 @@
-import { Camera } from "./camera";
-import { vec3 } from 'wgpu-matrix';
+import { Camera } from "../engine/camera/camera";
 
 export class CameraControls {
     private camera: Camera;
@@ -17,7 +16,7 @@ export class CameraControls {
     }
 
     private addKeyboardListeners(): void {
-        //window.addEventListener('keydown', this.handleKeyDown);
+        window.addEventListener('keydown', this.handleKeyDown);
     }
     private addMouseListeners(): void {
         this.canvas.addEventListener('mousedown', this.handleMouseDown);

@@ -3,7 +3,8 @@ import { Scene } from './scene';
 import { Triangle } from './objects/triangle';
 import { Sphere } from './objects/sphere';
 import { Camera } from './camera/camera';
-import { CameraControls } from './camera/camera-controls';
+import { CameraControls } from '../interactions/camera-controls';
+import { KeyboardControls } from '../interactions/keyboard-controls';
 
 export class Renderer {
     private canvas: HTMLCanvasElement;
@@ -28,11 +29,17 @@ export class Renderer {
             this.cameraControls = new CameraControls(this.camera, this.canvas);
             
             this.scene = new Scene(this.device);
+            
             const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
-            sphere.loadTexturesVideo(['ocean/turtles/loggerhead_sea_turtles_track.m3u8', 'base_map_normal.jpg', 'base_map_specular.jpg']);
-            //this.scene.addObject(triangle);
             this.scene.addObject(sphere);
+            sphere.loadTexture('base_map_normal.jpg');
+            sphere.loadTexture('base_map.jpg');
+            sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
+            sphere.loadTexture('ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
+            
+            this.scene.addObject(triangle);
+            this.scene.keyboardControlsSetter = new KeyboardControls(this.scene);
             this.startRenderingLoop();
         }).catch(error => {
             console.error("Failed to initialize WebGPU:", error);
