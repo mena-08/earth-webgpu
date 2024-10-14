@@ -39,9 +39,8 @@ checkWebGPUSupport().then((supported) => {
     if (supported) {
         console.log("Loading rendering engine...");
         const render = new Renderer('gpuCanvas');
-        console.log(render.getCamera());
-        console.log("THIS SHOULD HAVE A CAMERA",render.getCamera());
-        new ChatManager('chat-input', 'send-btn', 'messages', render.getCamera());
+        const render2 = new Renderer('gpuCanvas2');
+        // new ChatManager('chat-input', 'send-btn', 'messages', render.getCamera());
     } else {
         console.log("Rendering engine cannot be loaded due to lack of WebGPU support.");
     }

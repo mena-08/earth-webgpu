@@ -222,8 +222,8 @@ export class Sphere {
                 }]
             },
             primitive: {
-                //topology: 'triangle-list',
-                topology: 'line-list',
+                topology: 'triangle-list',
+                //topology: 'line-list',
             },depthStencil: {
                 depthWriteEnabled: true,
                 depthCompare: 'less',

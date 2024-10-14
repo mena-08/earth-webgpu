@@ -20,6 +20,7 @@ export class Renderer {
 
     constructor(canvasId: string) {
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+        console.log("Canvas being used:", this.canvas);
         this.camera = new Camera([2.0, 2.0, -5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
         this.initializeWebGPU().then(() => {
             this.clearCanvas();
@@ -135,7 +136,7 @@ export class Renderer {
         this.camera.updateProjectionMatrix();
         this.cameraControls.updateCameraOrbit(0.01);        
 
-        const commandEncoder = this.device.createCommandEncoder();
+        const commandEncoder = this.device.createCommandEncoder({label: 'Frame Encoder'});
         const textureView = this.context.getCurrentTexture().createView();
         const depthTextureView = this.depthTexture.createView();
 

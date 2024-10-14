@@ -6,8 +6,22 @@ html, body {
     width: 100%;
 }
 
+#canvas-container {
+    display: flex;
+    width: 50%;
+}
+
 canvas {
-    display: block;
-    width: 100%;
+    width: 50%;
     height: 100%;
+}
+
+#gpuCanvas{
+    position: absolute;
+    left: 0;
+}
+
+#gpuCanvas2{
+    position: absolute;
+    right: 0;
 }

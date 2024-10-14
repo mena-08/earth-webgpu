@@ -19,9 +19,6 @@ export class KeyboardControls {
             case "q":
                 this.handleQKey();
                 break;
-            case "e":
-                this.handleEKey();
-                break;
             default:
                 break;
         }
@@ -32,12 +29,5 @@ export class KeyboardControls {
         this.scene.getObjectById('object-0').switchTexture((this.scene.getObjectById('object-0').currentTextureIndex + 1) % this.scene.getObjectById('object-0').textures.length);
         console.log(this.scene.getObjectById('object-0'));
         console.log("Q key pressed");
-
-    }
-
-    private handleEKey(): void {
-        //THIS IS JUST FOR TESTING STUFF
-        this.scene.getObjectById('object-0').switchTexture((this.scene.getObjectById('object-0').currentTextureIndex - 1) % this.scene.getObjectById('object-0').textures.length);
-        console.log("E key pressed");
     }
 }
