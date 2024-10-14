@@ -13,6 +13,7 @@ export class Triangle {
 
     constructor(device: GPUDevice, color: [number, number, number, number], position: [number, number, number]) {
         this.device = device;
+        console.log("Device in Triangle:", this.device);
         this.color = new Float32Array(color);
         this.position = new Float32Array(position);
         this.initializeBuffers();

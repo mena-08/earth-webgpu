@@ -17,35 +17,63 @@ export class Renderer {
     private depthTexture!: GPUTexture;
     private lastRenderTime : number= 0;
     private sphere!: Sphere;
+    private needsRedraw: boolean = true;
+    private isReady: boolean = false;
+    private readyCallbacks: Array<() => void> = [];
 
-    constructor(canvasId: string) {
+    constructor(canvasId: string, device: GPUDevice) {
+        this.device = device;
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-        console.log("Canvas being used:", this.canvas);
         this.camera = new Camera([2.0, 2.0, -5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
-        this.initializeWebGPU().then(() => {
-            this.clearCanvas();
-            this.createDepthTexture();
-            //initialize camera and scene
-            this.resizeCanvas();
+        this.initializeWebGPU(this.device).then(() => {
+            this.setupScene();
+            this.isReady = true;
             this.cameraControls = new CameraControls(this.camera, this.canvas);
+            this.readyCallbacks.forEach(callback => callback());
             
-            this.scene = new Scene(this.device);
-            
-            const triangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
+            const triwangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
             this.scene.addObject(sphere);
-            sphere.loadTexture('base_map_normal.jpg');
             sphere.loadTexture('base_map.jpg');
+            //sphere.loadTexture('base_map_normal.jpg');
             sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
             sphere.loadTexture('ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
             
-            this.scene.addObject(triangle);
+            //this.scene.addObject(triangle);
             this.scene.keyboardControlsSetter = new KeyboardControls(this.scene);
             this.startRenderingLoop();
         }).catch(error => {
             console.error("Failed to initialize WebGPU:", error);
         });
     }
+
+    public onReady(callback: () => void): void {
+        if(this.isReady) {
+            return;
+        }
+        this.readyCallbacks.push(callback);
+    }
+
+    private setupScene(): void {
+        this.clearCanvas();
+        this.createDepthTexture();
+        this.resizeCanvas();
+        
+        this.scene = new Scene(this.device);
+    }
+
+    public getScene(): Scene {
+        if(!this.isReady){
+            throw new Error("Renderer is not ready yet.");
+        }
+        return this.scene;
+    }
+
+    public addObject(object: any): void {
+        console.log("Object being added:", this.scene);
+        this.scene.addObject(object);
+        this.needsRedraw = true;
+        }
 
     private createDepthTexture(): void {
         if (this.depthTexture) {
@@ -64,17 +92,9 @@ export class Renderer {
     }
 
 
-    private async initializeWebGPU(): Promise<void> {
-        if (!navigator.gpu) {
-            throw new Error("WebGPU is not supported.");
-        }
+    private async initializeWebGPU(device: GPUDevice): Promise<void> {
 
-        const adapter = await navigator.gpu.requestAdapter();
-        if (!adapter) {
-            throw new Error("Failed to get GPU adapter.");
-        }
-
-        this.device = await adapter.requestDevice();
+        this.device = device;
         this.context = this.canvas.getContext('webgpu') as GPUCanvasContext;
 
         const devicePixelRatio = window.devicePixelRatio || 1;
@@ -124,6 +144,10 @@ export class Renderer {
 
     private startRenderingLoop(): void {
         const frame = () => {
+            if(this.needsRedraw) {
+                this.render();
+                this.needsRedraw = false;
+            }
             this.render();
             requestAnimationFrame(frame);
         };

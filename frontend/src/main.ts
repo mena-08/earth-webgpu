@@ -5,6 +5,8 @@
  * indicating whether WebGPU is supported on the device or not. If WebGPU is supported, it returns
  * `true`, otherwise it returns `false`.
  */
+import { GPUDeviceManager } from "engine/loaders/gpu-device-manager";
+import { Triangle } from "engine/objects/triangle";
 import { Renderer } from "engine/renderer";
 import { ChatManager } from "interactions/chat-manager";
 
@@ -35,11 +37,29 @@ async function checkWebGPUSupport(): Promise<boolean> {
     return true;
 }
 
-checkWebGPUSupport().then((supported) => {
+checkWebGPUSupport().then(async (supported) => {
     if (supported) {
         console.log("Loading rendering engine...");
-        const render = new Renderer('gpuCanvas');
-        const render2 = new Renderer('gpuCanvas2');
+        const deviceManager = GPUDeviceManager.getInstance();
+        await deviceManager.initializeDevice();
+        const device = deviceManager.getDevice();
+        
+        
+        const render = new Renderer('gpuCanvas',  device);
+        
+        render.onReady(() => {
+            const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
+            const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
+            const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
+            //console.log("GPU device initialized.", render.getScene());
+            render.addObject(triangle);
+            render.addObject(triangle2);
+            render.addObject(triangle3);
+        });
+        const render2 = new Renderer('gpuCanvas2',  device);
+        
+        
+        //render.getScene
         // new ChatManager('chat-input', 'send-btn', 'messages', render.getCamera());
     } else {
         console.log("Rendering engine cannot be loaded due to lack of WebGPU support.");
