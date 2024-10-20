@@ -22,8 +22,9 @@ function wgslPlugin() {
 export default {
   input: 'src/main.ts',
   output: {
-    file: 'public/bundle.js',
-    format: 'iife',
+    dir: 'public/output',
+    //file: 'public/bundle.js',
+    format: 'esm',
     sourcemap: true
   },
   plugins: [
@@ -32,7 +33,7 @@ export default {
       include: ["**/*.png", "**/*.jpg", "**/*.gif"],
       emitFiles: true,
       fileName: '[dirname][hash][extname]',
-      destDir: 'dist/assets'
+      destDir: 'output/assets'
   }),
     wgslPlugin(),
     typescript(),

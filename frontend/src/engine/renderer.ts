@@ -2,9 +2,12 @@
 import { Scene } from './scene';
 import { Triangle } from './objects/triangle';
 import { Sphere } from './objects/sphere';
+import { Plane } from './objects/plane';
 import { Camera } from './camera/camera';
 import { CameraControls } from '../interactions/camera-controls';
 import { KeyboardControls } from '../interactions/keyboard-controls';
+import { initDigitalElevationModel } from './loaders/geotiff-manager';
+
 
 export class Renderer {
     private canvas: HTMLCanvasElement;
@@ -24,8 +27,8 @@ export class Renderer {
     constructor(canvasId: string, device: GPUDevice) {
         this.device = device;
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-        this.camera = new Camera([2.0, 2.0, -5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 100);
-        this.initializeWebGPU(this.device).then(() => {
+        this.camera = new Camera([2.0, 2.0, 5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 1000000);
+        this.initializeWebGPU(this.device).then(async () => {
             this.setupScene();
             this.isReady = true;
             this.cameraControls = new CameraControls(this.camera, this.canvas);
@@ -33,7 +36,24 @@ export class Renderer {
             
             const triwangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
+            const plane = new Plane(this.device, [0.0, 0.0, 10.0], 57.0, 48.0, 1253, 979);
+            const loader = await initDigitalElevationModel(device,[0,0,0],'geoTIFF/agri-medium-dem.tif');
+            console.log("width:", loader[0]);
+            console.log("height:", loader[1]);
+            loader[2].readRasters({interleave: true}).then((rasters: any) => {
+                console.log("RASTERS:", rasters.length);
+                //plane.loadTexture('geoTIFF/agri-medium-autumn.jpg');
+                plane.applyElevationData(rasters);
+            });
+
+            //console.log("WHATS THIIIS", );
+            console.log(loader[1]);
+            //try to use the dem stuff here:
+
+            console.log("Pkane:", plane);
+            console.log("Triangle:", triwangle);
             this.scene.addObject(sphere);
+            this.scene.addObject(plane);
             sphere.loadTexture('base_map.jpg');
             //sphere.loadTexture('base_map_normal.jpg');
             sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
@@ -130,7 +150,7 @@ export class Renderer {
             colorAttachments: [{
                 view: textureView,
                 loadOp: 'clear',
-                clearValue: { r: 0, g: 0, b: 0, a: 1 },
+                clearValue: { r: 1, g: 1, b: 1, a: 1 },
                 storeOp: 'store',
             }]
         };

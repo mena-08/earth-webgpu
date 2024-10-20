@@ -9,6 +9,7 @@ import { GPUDeviceManager } from "engine/loaders/gpu-device-manager";
 import { Triangle } from "engine/objects/triangle";
 import { Renderer } from "engine/renderer";
 import { ChatManager } from "interactions/chat-manager";
+import { initDigitalElevationModel } from "engine/loaders/geotiff-manager";
 
 // frontend/src/main.ts
 async function checkWebGPUSupport(): Promise<boolean> {
@@ -46,17 +47,32 @@ checkWebGPUSupport().then(async (supported) => {
         
         
         const render = new Renderer('gpuCanvas',  device);
+        //const render2 = new Renderer('gpuCanvas2',  device);
+
+        // console.log("THIS SHOULD BE LOADING");
+        //  const loader = initDigitalElevationModel(device,[0,0,0],'geoTIFF/n19_w156_1arc_v3.tif');
+        //console.log(loader);
+        console.log("+++++++++++++++++++++");
+        // console.log(loader);
         
         render.onReady(() => {
             const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
             const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
             const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
             //console.log("GPU device initialized.", render.getScene());
-            render.addObject(triangle);
-            render.addObject(triangle2);
-            render.addObject(triangle3);
+            // render.addObject(triangle);
+            // render.addObject(triangle2);
+            // render.addObject(triangle3);
         });
-        const render2 = new Renderer('gpuCanvas2',  device);
+        // render2.onReady(() => {
+        //     const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
+        //     const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
+        //     const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
+        //     //console.log("GPU device initialized.", render.getScene());
+        //     render2.addObject(triangle);
+        //     render2.addObject(triangle2);
+        //     render2.addObject(triangle3);
+        // });
         
         
         //render.getScene

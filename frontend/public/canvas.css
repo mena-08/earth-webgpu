@@ -7,16 +7,17 @@ html, body {
 }
 
 #canvas-container {
-    display: flex;
-    width: 50%;
-}
-
-canvas {
-    width: 50%;
+    display: block;
+    width: 100%;
     height: 100%;
 }
 
-#gpuCanvas{
+canvas {
+    width: 100%;
+    height: 100%;
+}
+
+/* #gpuCanvas{
     position: absolute;
     left: 0;
 }
@@ -24,4 +25,4 @@ canvas {
 #gpuCanvas2{
     position: absolute;
     right: 0;
-}
+} */

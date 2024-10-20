@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "rollup.config.js",
   "scripts": {
-    "start": "rollup -c -w",
+    "start": "rollup -c -w --no-cache",
     "build": "rollup -c"
   },
   "keywords": [],

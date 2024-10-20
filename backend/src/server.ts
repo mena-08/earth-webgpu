@@ -98,6 +98,34 @@ app.post('/audio', upload.single('file'), async (req: Request, res: Response) =>
   }
 });
 
+// Route to serve GeoTIFF files
+app.get('/geoTIFF/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const options: {
+    root: string;
+    dotfiles: "deny" | "allow" | "ignore";  // Corrected type
+    headers: {
+      'x-timestamp': number;
+      'x-sent': boolean;
+    };
+  } = {
+    root: path.join(__dirname, '../../frontend/public/geotiff'),
+    dotfiles: 'deny',  // Correct value
+    headers: {
+      'x-timestamp': Date.now(),
+      'x-sent': true
+    }
+  };
+  //http://localhost:3000/geoTIFF/n19_w156_1arc_v3.tif
+
+  res.sendFile(filename, options, (err) => {
+    if (err) {
+      console.log(err);
+      res.status(500).end();
+    }
+  });
+});
+
 
 
 app.listen(port, () => {

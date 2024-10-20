@@ -9,7 +9,7 @@
         "strict": true,
         "esModuleInterop": true,
         "moduleResolution": "node",
-        "outDir": "./dist",
+        "outDir": "public/output",
         "sourceMap": true,
         "baseUrl": ".",
         "paths": {
