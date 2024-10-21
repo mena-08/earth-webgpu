@@ -36,14 +36,16 @@ export class Renderer {
             
             const triwangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
-            const plane = new Plane(this.device, [0.0, 0.0, 10.0], 57.0, 48.0, 1253, 979);
+            const plane = new Plane(this.device, [0.0, 0.0, 10.0], 20, 40, 1253, 979);
             const loader = await initDigitalElevationModel(device,[0,0,0],'geoTIFF/agri-medium-dem.tif');
+            plane.loadTexture('geotiff/agri-medium-autumn.jpg');
             console.log("width:", loader[0]);
             console.log("height:", loader[1]);
             loader[2].readRasters({interleave: true}).then((rasters: any) => {
                 console.log("RASTERS:", rasters.length);
-                //plane.loadTexture('geoTIFF/agri-medium-autumn.jpg');
+                
                 plane.applyElevationData(rasters);
+                //plane.loadTexture('geotiff/agri-medium-autumn.jpg');
             });
 
             //console.log("WHATS THIIIS", );

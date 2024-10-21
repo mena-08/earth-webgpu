@@ -18,6 +18,7 @@ export class Plane {
     
     private textures: GPUTexture[] = [];
     private samplers : GPUSampler[] = [];
+    
 
     private modelMatrix = mat4.identity();
     
@@ -29,6 +30,32 @@ export class Plane {
         this.initializeBuffers(width, height, widthSegments, heightSegments);
         this.createUniformBuffer();
         this.createPipeline();
+    }
+
+    async loadTexture(url: string, isVideo: boolean = false): Promise<void> {
+        let texture, sampler;
+        texture = await loadTexture(this.device, url);
+        sampler = createSampler(this.device, 'static');
+        this.textures.push(texture);
+        this.samplers.push(sampler);  // Corresponding samplers for each texture
+        this.updateBindGroup();
+    }
+
+    private updateBindGroup(): void {
+        if (this.textures.length === 0 || this.samplers.length === 0) {
+            console.error("No textures or samplers initialized");
+            return;
+        }
+
+        //always use the current texture index to update the bind group
+        this.bindGroup = this.device.createBindGroup({
+            layout: this.pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.uniformBuffer } },
+                { binding: 1, resource: this.samplers[0] },
+                { binding: 2, resource: this.textures[0].createView() },
+            ],
+        });
     }
 
     private initializeBuffers(width: number, height: number, widthSegments: number, heightSegments: number): void {
@@ -52,7 +79,11 @@ export class Plane {
             const y = iy * segment_height - height_half;
             for (let ix = 0; ix < gridX1; ix++) {
                 const x = ix * segment_width - width_half;
-                this.vertices.push(x + this.position[0], -y + this.position[1], 0 + this.position[2], 1.0);  // Position only
+                const u = ix / gridX; // Calculate UV coordinates
+                const v = 1 - (iy / gridY);
+
+                // Position (x, y, z), UV (u, v)
+                this.vertices.push(x + this.position[0], -y + this.position[1], 0 + this.position[2], 1.0, u, v);
             }
         }
 
@@ -84,6 +115,8 @@ export class Plane {
         this.bindGroupLayout = this.device.createBindGroupLayout({
             entries: [
                 { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 192 } },
+                { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+                { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
             ]
         });
     }
@@ -117,62 +150,59 @@ export class Plane {
 
             struct VertexOutput {
                 @builtin(position) position: vec4<f32>,
+                @location(0) uv: vec2<f32>,
             };
 
             @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
             @vertex
-            fn vs_main(@location(0) position: vec4<f32>) -> VertexOutput {
+            fn vs_main(@location(0) position: vec4<f32>, @location(1) uv: vec2<f32>) -> VertexOutput {
                 var output: VertexOutput;
-                let worldPosition = uniforms.modelMatrix * position;
+                let worldPosition = uniforms.modelMatrix * vec4<f32>(position.xyz, 1.0);
                 let viewPosition = uniforms.viewMatrix * worldPosition;
                 let clipPosition = uniforms.projectionMatrix * viewPosition;
                 output.position = clipPosition;
+                output.uv = uv;
                 return output;
             }`;
 
         const fragmentShaderCode = `
+            @group(0) @binding(1) var mySampler: sampler;
+            @group(0) @binding(2) var myTexture: texture_2d<f32>;
+
             @fragment
-            fn fs_main() -> @location(0) vec4<f32> {
-                return vec4<f32>(1.0, 0.0, 0.0, 1.0); // Output solid red color
+            fn fs_main(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
+                return textureSample(myTexture, mySampler, uv);
+                //return vec4<f32>(1.0, 0.0, 0.0, 1.0); // Output solid red color
             }`;
 
         this.pipeline = this.device.createRenderPipeline({
             layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] }),
             label: "plane-pipeline",
             vertex: {
-                module: this.device.createShaderModule({ code: vertexShaderCode }),
+                module: this.device.createShaderModule({ code: vertexShaderCode, label: "plane-vertex" }),
                 entryPoint: "vs_main",
                 buffers: [{
-                    arrayStride: 4 * 4,  // Only position, no UVs
+                    arrayStride: 4 * 6,  // Only position, no UVs
                     attributes: [
                         { shaderLocation: 0, offset: 0, format: 'float32x4' },
+                        {
+                            shaderLocation: 1,
+                            offset: 4 * 4,
+                            format: 'float32x2'
+                        }
                     ]
                 }]
             },
             fragment: {
-                module: this.device.createShaderModule({ code: fragmentShaderCode }),
+                module: this.device.createShaderModule({ code: fragmentShaderCode, label: "plane-fragment" }),
                 entryPoint: "fs_main",
                 targets: [{ format: 'bgra8unorm' }]
             },
-            primitive: { topology: 'line-list' },
+            primitive: { topology: 'triangle-list' },
             depthStencil: { depthWriteEnabled: true, depthCompare: 'less', format: 'depth24plus' }
         });
-        this.createBindGroup();
-    }
-
-    private createBindGroup(): void {
-        const bindGroupLayout = this.pipeline.getBindGroupLayout(0);
-        this.bindGroup = this.device.createBindGroup({
-            layout: bindGroupLayout,
-            entries: [{
-                binding: 0,
-                resource: {
-                    buffer: this.uniformBuffer,
-                    size: 192
-                }
-            }]
-        });
+        //this.createBindGroup();
     }
 
     applyElevationData(demData: any): void {
@@ -180,7 +210,7 @@ export class Plane {
         // Modify the Z value of each vertex based on the DEM data
         demData.forEach((elevation: number, index: number) => {
             //console.log("Elevation:", elevation/1000);
-            this.vertices[index * 4 + 2] = (elevation/1000) * -1; // Scale and invert elevation
+            this.vertices[index * 6 + 2] = (elevation/10000) * -1; // Scale and invert elevation
         });
         console.log("Vertices Length:", this.vertices);
 
