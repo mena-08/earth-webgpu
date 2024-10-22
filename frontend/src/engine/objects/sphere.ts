@@ -22,6 +22,7 @@ export class Sphere {
 
     private textures: GPUTexture[] = [];
     private samplers : GPUSampler[] = [];
+    private textureURLs: string[] = [];
 
     private modelMatrix = mat4.identity();
 
@@ -64,6 +65,15 @@ export class Sphere {
         this.textures.push(texture);
         this.samplers.push(sampler);  // Corresponding samplers for each texture
         this.updateBindGroup();
+    }
+
+    async loadMultipleTextures(urls: string[]): Promise<void> {
+        this.textureURLs = urls;
+
+        for (let i = 0; i < urls.length; i++) {
+            
+            await this.loadTexture(urls[i], true);
+        }
     }
 
     private updateBindGroup(): void {
@@ -291,6 +301,16 @@ export class Sphere {
         this.currentTextureIndex = index;
         this.updateBindGroup();
     }
+    
+    // Method to switch the texture based on index
+    public switchTextureByIndex(index: number): void {
+        if (index < 0 || index >= this.textures.length) {
+            console.error("Invalid texture index");
+            return;
+        }
+        this.switchTexture(index);
+    }
+
 
     draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
         //console.log(this.modelMatrix);
