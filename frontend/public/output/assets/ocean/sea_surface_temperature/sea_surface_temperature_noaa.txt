@@ -1,0 +1,55 @@
+{
+  "currentDataset": {
+    "title": "Sea Surface Temperature (SST) - NOAA Model Simulation",
+    "id": "sea_surface_temperature_noaa",
+    "description": "This dataset showcases variations in global sea surface temperatures over several years, highlighting the effects of seasonal cycles, surface ocean currents, and eddies that transport heat and water across the globe. The dataset is generated from NOAA's GFDL state-of-the-art climate model, providing a simulated view of SST patterns rather than observations.",
+    "tags": [
+      "sea surface temperature",
+      "SST",
+      "climate model",
+      "ocean currents",
+      "NOAA",
+      "GFDL",
+      "global warming",
+      "climate system"
+    ],
+    "climate_data": {
+      "background": "Sea surface temperature (SST) simulation from GFDL CM2.5v1 model",
+      "temperature_range": "0°C to over 30°C",
+      "color_mapping": {
+        "cool_temps": {
+          "range": "0°C or lower",
+          "color": "Dark Blue to White"
+        },
+        "moderate_temps": {
+          "range": "~10°C to ~20°C",
+          "color": "Light Blue to Green"
+        },
+        "warm_temps": {
+          "range": "20°C to 30°C",
+          "color": "Yellow to Red"
+        },
+        "hottest_temps": {
+          "range": "above 30°C",
+          "color": "Red to Black"
+        }
+      }
+    },
+    "key_points": {
+      "seasonal_migration": "The warmest and coldest SST regions migrate with the seasons.",
+      "current_dynamics": "Warm currents like the Gulf Stream and Kuroshio transport heat poleward, while cool currents move equatorward.",
+      "oceanic_influence": "Surface currents driven by winds and ocean dynamics influence the global climate system."
+    },
+    "model_data": {
+      "model_name": "GFDL CM2.5v1",
+      "producer": "NOAA Geophysical Fluid Dynamics Laboratory (GFDL)",
+      "model_type": "3D Numerical Climate Model",
+      "description": "Simulates the interaction between the atmosphere, ocean, land, and sea ice to study Earth's climate system over time."
+    },
+    "sources": [
+      "NOAA Geophysical Fluid Dynamics Laboratory (GFDL)",
+      "GFDL Climate Change, Variability, and Prediction Group",
+      "http://www.gfdl.noaa.gov/climate-modeling"
+    ]
+  }
+}

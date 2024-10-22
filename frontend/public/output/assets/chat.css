@@ -1,0 +1,116 @@
+#chat-container {
+    font-family: 'Arial', sans-serif;
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    padding: 10px;
+    position: fixed;
+    bottom: 10px;
+    right: 10px; 
+    width: 400px;
+    background: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+    border-radius: 15px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); /* Soft shadow */
+    overflow: hidden;
+    transition: all 0.3s ease; /* Smooth transition for resizing */
+    z-index: 1000; /* Above everything else */
+}
+
+/* Message bubble styling */
+.message-bubble, .message-bubble-GPT {
+    padding: 10px;
+    border-radius: 18px;
+    color: white;
+    max-width: 70%;
+    word-wrap: break-word;
+    margin-bottom: 10px;
+}
+
+.message-bubble {
+    background: linear-gradient(145deg, #6b6a6a, #555555); /* Gradient for user messages */
+    margin-left: auto; /* Aligns user messages to the right */
+}
+
+.message-bubble-GPT {
+    background: linear-gradient(145deg, #007bff, #0056b3); /* Gradient for GPT messages */
+    margin-right: auto; /* Aligns GPT messages to the left */
+    text-align: left; /* Aligns text inside the bubble to the left */
+}
+
+/* Input area and buttons styling */
+#chat-input-container {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+}
+
+#chat-input {
+    flex-grow: 1;
+    margin-right: 10px;
+    background: white;
+    border: 2px solid transparent;
+    height: 40px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+#chat-input:focus {
+    border-color: #007bff; /* Focus color */
+}
+
+#send-btn {
+    width: 60px;
+    height: 40px;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    border: none;
+    border-radius: 20px;
+    margin-left: 5px; /* Add space between the buttons */
+    transition: background-color 0.3s ease;
+}
+
+#record-btn {
+    width: 60px;
+    height: 40px;
+    background: #556b2f; /* Dark Olive Green */
+    color: #fffff0; /* Ivory */
+    cursor: pointer;
+    border: none;
+    border-radius: 20px;
+    margin-left: 5px;
+    transition: background-color 0.3s ease;
+}
+
+
+#send-btn:hover, #record-btn:hover {
+    background-color: #0056b3;
+}
+
+#record-btn.pressed {
+    background-color: #ff0000;
+}
+
+/* Messages container styling */
+#messages {
+    overflow-y: auto;
+    height: 700px; /* Increased height */
+}
+
+/* Custom scrollbar for messages */
+#messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+#messages::-webkit-scrollbar-thumb {
+    background-color: #007bff;
+    border-radius: 10px;
+}
+
+#messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#download-interaction {
+    z-index: 1000;
+}

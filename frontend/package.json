@@ -4,7 +4,8 @@
   "main": "rollup.config.js",
   "scripts": {
     "start": "rollup -c -w --no-cache",
-    "build": "rollup -c"
+    "dev": "rollup -c -w --no-cache",
+    "build": "rollup -c --environment NODE_ENV:production"
   },
   "keywords": [],
   "author": "",

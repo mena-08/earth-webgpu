@@ -1,6 +1,7 @@
 import { ContextManager } from './context-manager';
 import { sendToServerStreaming, sendToServer } from '../network/endpoints';
 import { Camera } from 'engine/camera/camera';
+import { render2, sphere, sphereMarker } from 'main';
 
 
 /* The `ChatManager` class manages a chat interface by sending and displaying messages between a user
@@ -47,7 +48,7 @@ export class ChatManager {
 
     private async sendMessage(): Promise<void> {
         const message = this.inputElement.value.trim();
-        //this.getCameraContext();
+        this.getCameraContext();
         if (message) {
             this.inputElement.value = '';
             this.contextManager.updateUserContext(message);
@@ -68,12 +69,69 @@ export class ChatManager {
         if (message) {
             try {
                 const response = await sendToServer(message);
-                console.log(response);
+                console.log("WHAT IS THIS RESPONSE:", response);
+                const parsedValues = this.extractValuesFromResponse(response);
+                if (parsedValues) {
+                    if (typeof parsedValues[0] === 'number' && typeof parsedValues[1] === 'number') {
+                        render2.getCamera().setSphericalPosition(1.5, parsedValues[0], parsedValues[1]);
+                        sphere.latLongToSphereCoords(1, parsedValues[0], parsedValues[1]);
+                        const vec = sphere.latLongToSphereCoords(1, parsedValues[0], parsedValues[1]);
+                        sphereMarker.updatePosition([vec[0], vec[1], vec[2]]);
+                        console.log("THIS SHOULD BE RED SPHERE COORD", sphere.latLongToSphereCoords(1, parsedValues[0], parsedValues[1]));
+            
+                    } else if (typeof parsedValues[0] === 'string' && typeof parsedValues[1] === 'number') {
+                        console.log("THIS IS THE AXIS:", parsedValues[0]);
+                        console.log("THIS IS THE VALUE:", parsedValues[1]);
+                        let axisVector: [number, number, number];
+                        switch (parsedValues[0]) {
+                            case 'x':
+                                axisVector = [1, 0, 0];
+                                break;
+                            case 'y':
+                                axisVector = [0, 1, 0];
+                                break;
+                            case 'z':
+                                axisVector = [0, 0, 1];
+                                break;
+                            default:
+                                console.error('Invalid axis value');
+                                return;
+                        }
+                        sphere.rotate(axisVector, parsedValues[1]);
+                        
+                        // render2.getCamera().setAxisValue(parsedValues[0], parsedValues[1]);
+                    }
+                } else {
+                    console.error('Parsed values are null');
+                }
             } catch (error) {
                 console.error('Error sending message:', error);
             }
 
         }
+    }
+
+    private extractValuesFromResponse(response: string): number[] | [string, number] | null {
+        // Match for [float, float], [float, float, float], or ['axis', float]
+        const matchFloatArray = response.match(/\[(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)(?:,\s*(-?\d+(?:\.\d+)?))?\]/);
+        console.log("THIS SHOULD BE AN ARRAY", matchFloatArray?.slice(1).filter(Boolean).map(Number));
+        const matchAxisArray = response.match(/\[(\w+),\s*(-?\d+(?:\.\d+)?)\]/);
+        console.log("THIS SHOULD BE AN AXIS", matchFloatArray?.slice(1).filter(Boolean).map(Number));
+        
+        // Handle [float, float] or [float, float, float]
+        if (matchFloatArray) {
+            const values = matchFloatArray.slice(1).filter(Boolean).map(Number);
+            return values as number[]; // Can be [float, float] or [float, float, float]
+        }
+        
+        // Handle ['axis', float]
+        if (matchAxisArray) {
+            const axis = matchAxisArray[1];
+            const value = parseFloat(matchAxisArray[2]);
+            return [axis, value]; // ['axis', float]
+        }
+        // Return null if nothing matched
+        return null;
     }
 
 

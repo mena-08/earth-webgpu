@@ -18,7 +18,11 @@ export async function sendToServer(message: string): Promise<string> {
             body: JSON.stringify({
                 prompt: message,
                 conversation: [
-                    { role: 'system', content: 'Youre a black magician and are casting a spell. Reply very shortly' },
+                    { role: 'system', content: 'You are a 3D visualization tool in charge of navigation. Based on the prompt, reply always only with numerical vectors and no space within the brackets:\
+                        Two values for geographic coordinates. [lat,long], be as accurate as possible and use the WGS84. \
+                        Three values for 3D object movement. [0,3,0] or [3,3,1] as an example. \
+                        A single value along with x, y, or z as literal for rotation. [x,90] or [z,20] as an example If an axis or direction was not given, assume y axis. \
+                        Ignore any malformed input, like just one character or accidentally finished prompts and give no other explanations.'},
                     { role: 'user', content: message }
                 ]
             })
@@ -29,7 +33,6 @@ export async function sendToServer(message: string): Promise<string> {
         }
 
         const data = await response.json();
-        console.log('Response received:', data);
         return data.reply;
     } catch (error) {
         console.error('Error sending message:', error);

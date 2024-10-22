@@ -41,7 +41,7 @@ export class Scene {
     }
 
     set keyboardControlsSetter(keyboardControls: KeyboardControls) {
-        this.keyboardControls = keyboardControls;
+        //this.keyboardControls = keyboardControls;
     }
 
     private generateUniqueId(): string {

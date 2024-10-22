@@ -8,8 +8,14 @@
 import { GPUDeviceManager } from "engine/loaders/gpu-device-manager";
 import { Triangle } from "engine/objects/triangle";
 import { Renderer } from "engine/renderer";
+import { Plane } from "engine/objects/plane";
+import { Sphere } from "engine/objects/sphere";
 import { ChatManager } from "interactions/chat-manager";
 import { initDigitalElevationModel } from "engine/loaders/geotiff-manager";
+
+let render2: Renderer;
+let sphere: Sphere;
+let sphereMarker: Sphere;
 
 // frontend/src/main.ts
 async function checkWebGPUSupport(): Promise<boolean> {
@@ -46,8 +52,8 @@ checkWebGPUSupport().then(async (supported) => {
         const device = deviceManager.getDevice();
         
         
-        const render = new Renderer('gpuCanvas',  device);
-        //const render2 = new Renderer('gpuCanvas2',  device);
+        //const render = new Renderer('gpuCanvas',  device);
+        render2 = new Renderer('gpuCanvas2',  device);
 
         // console.log("THIS SHOULD BE LOADING");
         //  const loader = initDigitalElevationModel(device,[0,0,0],'geoTIFF/n19_w156_1arc_v3.tif');
@@ -55,29 +61,75 @@ checkWebGPUSupport().then(async (supported) => {
         console.log("+++++++++++++++++++++");
         // console.log(loader);
         
-        render.onReady(() => {
-            const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
-            const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
-            const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
-            //console.log("GPU device initialized.", render.getScene());
-            // render.addObject(triangle);
-            // render.addObject(triangle2);
-            // render.addObject(triangle3);
-        });
-        // render2.onReady(() => {
+        // render.onReady(async () => {
         //     const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
         //     const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
         //     const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
+
+             
+        //     //render.addObject(sphere);
+
+        //     const plane = new Plane(device, [0.0, 0.0, 10.0], 4, 3, 1253, 979);
+            
+        //     const loader = await initDigitalElevationModel(device,[0,0,0],'geoTIFF/agri-medium-dem.tif');
+        //     //const loader = await initDigitalElevationModel(device,[0,0,0],'geoTIFF/n19_w156_1arc_v3.tif');
+        //     console.log("width:", loader[0]);
+        //     console.log("height:", loader[1]);
+        //     plane.loadTexture('geotiff/agri-medium-autumn.jpg');
+        //     plane.setMode(1);
+            
+        //     loader[2].readRasters({interleave: true}).then((rasters: any) => {
+        //         console.log("RASTERS:", rasters.length);
+                
+        //         plane.applyElevationData(rasters);
+        //         plane.rotate([1, 0, 0], -Math.PI/2);
+        //         //plane.loadTexture('geotiff/agri-medium-autumn.jpg');
+        //     });
+
+        //     //console.log("WHATS THIIIS", );
+        //     console.log(loader[1]);
+        //     //try to use the dem stuff here:
+
+        //     console.log("Pkane:", plane);
+
         //     //console.log("GPU device initialized.", render.getScene());
-        //     render2.addObject(triangle);
-        //     render2.addObject(triangle2);
-        //     render2.addObject(triangle3);
+        //     //render.addObject(triangle);
+        //     render.addObject(plane);
+        //     // render.addObject(triangle3);
         // });
+
+
+        render2.onReady(() => {
+            // const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
+            // const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
+            // const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
+            //console.log("GPU device initialized.", render.getScene());
+            // render2.addObject(triangle);
+            // render2.addObject(triangle2);
+            // render2.addObject(triangle3);
+            sphere = new Sphere(device, [0.0, 0.0, 0.0], 1.0);
+            sphereMarker = new Sphere(device, [0.0, 0.0, 0.0], 0.01);
+            sphereMarker.loadTexture('red.jpg');
+            
+            //render2.getCamera().setSphericalPosition(1.5, -25.274398, 133.775136);
+            //this.camera.setSphericalPosition(2.0, 35.682839, 139.759455);
+             //this.scene.addObject(sphere);
+            //this.scene.addObject(plane);
+            //sphere.loadTexture('base_map.jpg');
+            //sphere.loadTexture('base_map_normal.jpg');
+            sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
+
+            //sphere.loadTexture('ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
+            render2.addObject(sphereMarker);
+            render2.addObject(sphere);
+        });
         
         
         //render.getScene
-        // new ChatManager('chat-input', 'send-btn', 'messages', render.getCamera());
+        new ChatManager('chat-input', 'send-btn', 'messages', render2.getCamera());
     } else {
         console.log("Rendering engine cannot be loaded due to lack of WebGPU support.");
     }
 });
+
+export { render2, sphere, sphereMarker };

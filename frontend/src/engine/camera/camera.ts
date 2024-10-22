@@ -101,7 +101,7 @@ export class Camera {
         }
 
         const interpolate = () => {
-            const speed = 0.015;
+            const speed = 0.02;
             let change = false;
 
             for (let i = 0; i < 3; i++) {

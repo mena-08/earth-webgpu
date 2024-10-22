@@ -35,34 +35,18 @@ export class Renderer {
             this.readyCallbacks.forEach(callback => callback());
             
             const triwangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
-            const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
-            const plane = new Plane(this.device, [0.0, 0.0, 10.0], 20, 40, 1253, 979);
-            const loader = await initDigitalElevationModel(device,[0,0,0],'geoTIFF/agri-medium-dem.tif');
-            plane.loadTexture('geotiff/agri-medium-autumn.jpg');
-            console.log("width:", loader[0]);
-            console.log("height:", loader[1]);
-            loader[2].readRasters({interleave: true}).then((rasters: any) => {
-                console.log("RASTERS:", rasters.length);
-                
-                plane.applyElevationData(rasters);
-                //plane.loadTexture('geotiff/agri-medium-autumn.jpg');
-            });
-
-            //console.log("WHATS THIIIS", );
-            console.log(loader[1]);
-            //try to use the dem stuff here:
-
-            console.log("Pkane:", plane);
-            console.log("Triangle:", triwangle);
-            this.scene.addObject(sphere);
-            this.scene.addObject(plane);
-            sphere.loadTexture('base_map.jpg');
-            //sphere.loadTexture('base_map_normal.jpg');
-            sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
-            sphere.loadTexture('ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
+            // const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
+            
+            // console.log("Triangle:", triwangle);
+            // //this.scene.addObject(sphere);
+            // //this.scene.addObject(plane);
+            // sphere.loadTexture('base_map.jpg');
+            // //sphere.loadTexture('base_map_normal.jpg');
+            // sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
+            // sphere.loadTexture('ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
             
             //this.scene.addObject(triangle);
-            this.scene.keyboardControlsSetter = new KeyboardControls(this.scene);
+            //this.scene.keyboardControlsSetter = new KeyboardControls(this.scene);
             this.startRenderingLoop();
         }).catch(error => {
             console.error("Failed to initialize WebGPU:", error);

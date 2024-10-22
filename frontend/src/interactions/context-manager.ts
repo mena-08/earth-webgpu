@@ -7,9 +7,13 @@ export class ContextManager {
     constructor() {
         this.prompt_engineering = "You are an interactive 3D Earth visualization assistant. Provide information and display animations from the current dataset. Reply in 35 words or less, separating paragraphs naturally with dots. Only apologize if corrected.\
 	Check for correctness when interpreting prompts, ignore typos, and complete information based on context. Omit mentioning inability to do things. Share only relevant context to the last prompt, no need to repeat titles or specific terms frequently. Use the metric system without abbreviations. Be friendly and concise, focusing on answering what is asked.\
-	You have the following datasets: Loggerhead Sea Turtles Track, Phytoplankton model, Sea Surface Temperature NOAA. This is are your current coordinates. Just in case the user asks something related to what region or specific place is seeing:"
+	You have the following datasets: Loggerhead Sea Turtles Track from NOAA. This is are your current coordinates. Just in case the user asks something related to what region or specific place is seeing:"
+    // this.prompt_engineering = "You are an interactive 3D Earth visualization assistant. Provide information and display animations from the current dataset. Reply in 35 words or less, separating paragraphs naturally with dots. Only apologize if corrected.\
+	// Check for correctness when interpreting prompts, ignore typos, and complete information based on context. Omit mentioning inability to do things. Share only relevant context to the last prompt, no need to repeat titles or specific terms frequently. Use the metric system without abbreviations. Be friendly and concise, focusing on answering what is asked.\
+	// You have the following datasets: Loggerhead Sea Turtles Track, Phytoplankton model, Sea Surface Temperature NOAA."
         this.setInitialSystemContext(this.prompt_engineering);
         this.setDatasetFromString('http://localhost:3000/ocean/turtles/loggerhead_sea_turtles_track.txt');
+
     }
 
     setInitialUserContext(content: string): void {
@@ -33,8 +37,17 @@ export class ContextManager {
     }
 
     updateSystemContextWithCoordinates(): void {
-        const fullSystemContext = `${this.context}\nCoordinates: ${this.coordinates}`;
-        this.setInitialSystemContext(fullSystemContext);
+        // Find the existing system context (if any)
+        const systemContext = this.context.find(entry => entry.role === 'system');
+    
+        // Get the current system context content without coordinates
+        const systemContentWithoutCoordinates = systemContext ? systemContext.content.replace(/Coordinates:.*$/, '').trim() : '';
+    
+        // Create the new system context with updated coordinates
+        const updatedSystemContent = `${systemContentWithoutCoordinates}\nCoordinates: ${this.coordinates}`;
+    
+        // Update the system context
+        this.updateSystemContext(updatedSystemContent);
     }
 
     setCoordinates(lat: number, lon: number): void {
@@ -94,7 +107,6 @@ export class ContextManager {
         this.context = [];
         this.dataset = {};
     }
-
 
     getDataset(): any {
         return this.dataset;

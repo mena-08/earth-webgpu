@@ -11,7 +11,7 @@ export class CameraControls {
     constructor(camera: Camera, canvas: HTMLCanvasElement) {
         this.camera = camera;
         this.canvas = canvas;
-        this.addKeyboardListeners();
+        //this.addKeyboardListeners();
         this.addMouseListeners();
     }
 

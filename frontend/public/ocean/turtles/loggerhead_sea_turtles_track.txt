@@ -27,21 +27,24 @@
     "climate_data": {
       "background": "Sea surface temperature (SST) climatology",
       "temperature_range": "11.0°C - 29°C",
-      "preferred_temperature": "18°C - 19°C",
+      "preferred_temperature": "18.5°C - 19°C",
       "color_mapping": {
         "cooler_temps": {
-          "range": "below 17°C",
+          "range": "below 17.7°C",
           "color": "blue"
         },
         "preferred_temps": {
-          "range": "18°C - 19°C",
+          "range": "17.7°C - 18.5°C",
           "color": "green and yellow zones"
         },
         "warmer_temps": {
-          "range": "above 18°C",
+          "range": "above 19°C",
           "color": "yellow to orange/reddish"
         }
       }
+    },
+    "visual_markers": {
+      "glyphs": "Each glyph represents an individual turtle that was tagged with a tracker. The glyph size corresponds to the turtle's length, and the glyph's movement path follows the turtle's tracked movements across the ocean."
     },
     "key_points": {
       "migration": "Turtles follow temperature bands, migrating seasonally",

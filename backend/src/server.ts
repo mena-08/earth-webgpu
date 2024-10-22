@@ -35,7 +35,7 @@ app.post('/chat', async (req: Request, res: Response) => {
   conversation.push({ role: "user", content: userMessage });
   try {
       const response = await openai.chat.completions.create({
-          model: "gpt-4o-2024-05-13",
+          model: "gpt-4-turbo-2024-04-09",
           messages: conversation
       });
       conversation.push({ role: "assistant", content: response.choices[0].message.content });

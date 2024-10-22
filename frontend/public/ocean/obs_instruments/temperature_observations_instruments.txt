@@ -1,0 +1,58 @@
+{
+    "currentDataset": {
+        "title": "Global Temperature Observations and Instruments (2023 GISS Surface Temperature Analysis)",
+        "id": "temperature_observations_instruments",
+        "description": "This dataset consists of global temperature observations collected from weather stations and marine platforms, contributing to the 2023 GISS Surface Temperature Analysis. It highlights the distribution of temperature measurement instruments, including land-based weather stations, ships, buoys, and other marine platforms, showcasing global data coverage used for monitoring temperature trends over time.",
+        "tags": [
+            "temperature",
+            "global warming",
+            "climatology",
+            "GHCN",
+            "ICOADS",
+            "buoys",
+            "marine platforms",
+            "temperature analysis"
+        ],
+        "instrument_data": {
+            "land_stations": {
+                "network": "Global Historical Climatology Network (GHCN)",
+                "description": "Land-based weather stations measuring temperature globally, forming the backbone of surface temperature monitoring."
+            },
+            "marine_stations": {
+                "network": "International Comprehensive Ocean-Atmosphere Data Set (ICOADS)",
+                "description": "Overwater temperature data sourced from ships, buoys, and other marine platforms."
+            }
+        },
+        "visual_cues": {
+            "station_distribution": {
+                "dense_areas": "High concentration of temperature measurement stations in North America, Europe, and parts of East Asia.",
+                "sparse_areas": "Notably low coverage in the Southern Hemisphere, particularly in Africa and large parts of the Pacific and Atlantic oceans."
+            },
+            "instrument_types": {
+                "land_station": "Red dots representing land weather stations.",
+                "ship": "Yellow dots indicating ship-based observations.",
+                "drifting_buoy": "Pink dots representing drifting buoys.",
+                "moored_buoy": "Orange dots representing moored buoys.",
+                "tide_gauge": "Green dots indicating tide gauges.",
+                "other": "Blue dots representing other types of instruments."
+            },
+            "legend": {
+                "land_station": "Red",
+                "ship": "Yellow",
+                "drifting_buoy": "Pink",
+                "moored_buoy": "Orange",
+                "tide_gauge": "Green",
+                "other": "Blue"
+            }
+        },
+        "key_points": {
+            "coverage_disparity": "Certain regions, such as the Arctic, African deserts, and Pacific Ocean, have poor instrument coverage, leading to greater uncertainty in temperature records from these areas.",
+            "importance_of_observation": "The dataset provides critical insights for detecting temperature trends and comparing historical and current data, important for climate change research."
+        },
+        "sources": [
+            "NOAA Global Historical Climatology Network (GHCN)",
+            "ICOADS",
+            "NASA GISS Surface Temperature Analysis (v4)"
+        ]
+    }
+}

@@ -265,6 +265,20 @@ export class Sphere {
         this.updateUniformBuffer();
     }
 
+    public updatePosition(newPosition: [number, number, number]): void {
+        // Update the position of the sphere
+        this.position = new Float32Array(newPosition);
+
+        // Reset the model matrix to identity
+        mat4.identity(this.modelMatrix);
+
+        // Apply translation to the model matrix to reflect the new position
+        mat4.translate(this.modelMatrix, this.modelMatrix, this.position);
+
+        // Update the uniform buffer to reflect the new model matrix
+        this.updateUniformBuffer();
+    }
+
     getPosition(): Float32Array {
         return this.position;
     }

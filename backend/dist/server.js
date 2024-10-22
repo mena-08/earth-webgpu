@@ -39,7 +39,7 @@ app.use(express_1.default.urlencoded({ extended: true }));
 // Serve static files from the frontend/public directory
 app.use(express_1.default.static(path_1.default.join(__dirname, '../../frontend/public')));
 app.get('/', (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../frontend/public/index.html'));
+    res.sendFile(path_1.default.join(__dirname, '../../frontend/index.html'));
 });
 app.post('/chat', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { conversation } = req.body;
@@ -47,7 +47,7 @@ app.post('/chat', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     conversation.push({ role: "user", content: userMessage });
     try {
         const response = yield openai.chat.completions.create({
-            model: "gpt-4o-2024-05-13",
+            model: "gpt-4-turbo-2024-04-09",
             messages: conversation
         });
         conversation.push({ role: "assistant", content: response.choices[0].message.content });

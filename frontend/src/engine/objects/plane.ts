@@ -1,6 +1,6 @@
 import { Camera } from 'engine/camera/camera';
 import { createSampler, loadTexture } from "../loaders/texture-loader";
-import { mat4 } from 'wgpu-matrix';
+import { mat4, vec3 } from 'wgpu-matrix';
 
 export class Plane {
     private device: GPUDevice;
@@ -19,6 +19,12 @@ export class Plane {
     private textures: GPUTexture[] = [];
     private samplers : GPUSampler[] = [];
     
+    private modeBuffer!: GPUBuffer;
+    private zRangeBuffer!: GPUBuffer;
+    private mode: number = 0; // 0: texture, 1: Z-based color
+    private minZ: number = 0; // Will be set based on DEM data
+    private maxZ: number = 0; // Will be set based on DEM data
+
 
     private modelMatrix = mat4.identity();
     
@@ -27,6 +33,8 @@ export class Plane {
         this.position = new Float32Array(position);
         this.modelMatrix = mat4.identity();
         this.initializeBindGroupLayout();
+        this.createModeBuffer();
+        this.createZRangeBuffer();
         this.initializeBuffers(width, height, widthSegments, heightSegments);
         this.createUniformBuffer();
         this.createPipeline();
@@ -41,6 +49,41 @@ export class Plane {
         this.updateBindGroup();
     }
 
+    private createModeBuffer(): void {
+        this.modeBuffer = this.device.createBuffer({
+            size: 4,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this.device.queue.writeBuffer(this.modeBuffer, 0, new Uint32Array([this.mode]));
+    }
+
+    rotate(axis: [number, number, number], angle: number): void {
+        const axisVec = new Float32Array(axis);
+        mat4.axisRotate(this.modelMatrix, vec3.fromValues(axisVec[0], axisVec[1], axisVec[2]), angle, this.modelMatrix);
+        this.updateUniformBuffer();
+    }
+
+    private updateUniformBuffer(){
+        const byteOffsetModelMatrix = 0;
+
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            byteOffsetModelMatrix,
+            this.modelMatrix.buffer,
+            this.modelMatrix.byteOffset,
+            this.modelMatrix.byteLength
+        );
+    }
+    
+    private createZRangeBuffer(): void {
+        this.zRangeBuffer = this.device.createBuffer({
+            size: 8,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        // Initialize with default values
+        this.device.queue.writeBuffer(this.zRangeBuffer, 0, new Float32Array([this.minZ, this.maxZ]));
+    }    
+
     private updateBindGroup(): void {
         if (this.textures.length === 0 || this.samplers.length === 0) {
             console.error("No textures or samplers initialized");
@@ -54,9 +97,17 @@ export class Plane {
                 { binding: 0, resource: { buffer: this.uniformBuffer } },
                 { binding: 1, resource: this.samplers[0] },
                 { binding: 2, resource: this.textures[0].createView() },
+                { binding: 3, resource: { buffer: this.modeBuffer } },
+                { binding: 4, resource: { buffer: this.zRangeBuffer } },
             ],
         });
     }
+
+    public setMode(mode: number): void {
+        this.mode = mode;
+        this.device.queue.writeBuffer(this.modeBuffer, 0, new Uint32Array([this.mode]));
+    }
+    
 
     private initializeBuffers(width: number, height: number, widthSegments: number, heightSegments: number): void {
         const width_half = width / 2;
@@ -80,7 +131,7 @@ export class Plane {
             for (let ix = 0; ix < gridX1; ix++) {
                 const x = ix * segment_width - width_half;
                 const u = ix / gridX; // Calculate UV coordinates
-                const v = 1 - (iy / gridY);
+                const v = (iy / gridY);
 
                 // Position (x, y, z), UV (u, v)
                 this.vertices.push(x + this.position[0], -y + this.position[1], 0 + this.position[2], 1.0, u, v);
@@ -117,6 +168,8 @@ export class Plane {
                 { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 192 } },
                 { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
                 { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+                { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform', minBindingSize: 4 } }, // mode
+                { binding: 4, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform', minBindingSize: 8 } }, // zRange
             ]
         });
     }
@@ -151,6 +204,7 @@ export class Plane {
             struct VertexOutput {
                 @builtin(position) position: vec4<f32>,
                 @location(0) uv: vec2<f32>,
+                @location(1) zValue: f32,
             };
 
             @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -159,6 +213,7 @@ export class Plane {
             fn vs_main(@location(0) position: vec4<f32>, @location(1) uv: vec2<f32>) -> VertexOutput {
                 var output: VertexOutput;
                 let worldPosition = uniforms.modelMatrix * vec4<f32>(position.xyz, 1.0);
+                output.zValue = position.z;
                 let viewPosition = uniforms.viewMatrix * worldPosition;
                 let clipPosition = uniforms.projectionMatrix * viewPosition;
                 output.position = clipPosition;
@@ -169,10 +224,37 @@ export class Plane {
         const fragmentShaderCode = `
             @group(0) @binding(1) var mySampler: sampler;
             @group(0) @binding(2) var myTexture: texture_2d<f32>;
+            @group(0) @binding(3) var<uniform> mode: u32;
+            @group(0) @binding(4) var<uniform> zRange: vec2<f32>;
+
+            // Function to interpolate between colors
+            fn interpolateColor(a: vec3<f32>, b: vec3<f32>, t: f32) -> vec3<f32> {
+                return mix(a, b, t);
+            }
 
             @fragment
-            fn fs_main(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
-                return textureSample(myTexture, mySampler, uv);
+            fn fs_main(@location(0) uv: vec2<f32>, @location(1) zValue: f32) -> @location(0) vec4<f32> {
+            if (mode == 0u) {
+                    return textureSample(myTexture, mySampler, uv);
+            }else{
+                   // Z-based coloring mode
+                    let t = clamp((zValue - zRange.x) / (zRange.y - zRange.x), 0.0, 1.0);
+                    
+                    // Define the colors: purple (bottom), yellow (mid), red (top)
+                    let purple = vec3<f32>(0.5, 0.0, 0.5);
+                    let yellow = vec3<f32>(1.0, 1.0, 0.0);
+                    let red = vec3<f32>(1.0, 0.0, 0.0);
+
+                    // Interpolate between purple and yellow for t < 0.5, and yellow and red for t >= 0.5
+                    let color = mix(
+                        interpolateColor(purple, yellow, t * 2.0), // Bottom to mid
+                        interpolateColor(yellow, red, (t - 0.5) * 2.0), // Mid to top
+                        step(0.5, t) // Switch interpolation based on the midpoint
+                    );
+
+                    return vec4<f32>(color, 1.0);
+            }
+                //return textureSample(myTexture, mySampler, uv);
                 //return vec4<f32>(1.0, 0.0, 0.0, 1.0); // Output solid red color
             }`;
 
@@ -199,26 +281,36 @@ export class Plane {
                 entryPoint: "fs_main",
                 targets: [{ format: 'bgra8unorm' }]
             },
-            primitive: { topology: 'triangle-list' },
+            primitive: { topology: 'line-list' },
             depthStencil: { depthWriteEnabled: true, depthCompare: 'less', format: 'depth24plus' }
         });
         //this.createBindGroup();
     }
 
     applyElevationData(demData: any): void {
-        console.log("DEM Data Length:", demData.length);
-        // Modify the Z value of each vertex based on the DEM data
+        let minZ = Number.POSITIVE_INFINITY;
+        let maxZ = Number.NEGATIVE_INFINITY;
+    
         demData.forEach((elevation: number, index: number) => {
-            //console.log("Elevation:", elevation/1000);
-            this.vertices[index * 6 + 2] = (elevation/10000) * -1; // Scale and invert elevation
+            const zValue = (elevation / 10000) * 1; // Adjust scaling as needed
+            this.vertices[index * 6 + 2] = zValue; // Update Z value
+            minZ = Math.min(minZ, zValue);
+            maxZ = Math.max(maxZ, zValue);
         });
-        console.log("Vertices Length:", this.vertices);
-
+    
+        this.minZ = minZ; 
+        this.maxZ = maxZ;
+    
+        // Update zRangeBuffer
+        this.device.queue.writeBuffer(this.zRangeBuffer, 0, new Float32Array([this.minZ, this.maxZ]));
+    
         // Recreate the vertex buffer with updated Z values
         this.createVertexBuffer();
     }
+    
 
     draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
+        if(!this.bindGroup) return;
         this.device.queue.writeBuffer(this.uniformBuffer, 0, camera.viewMatrix.buffer, camera.viewMatrix.byteOffset, camera.viewMatrix.byteLength);
         this.device.queue.writeBuffer(this.uniformBuffer, 64, camera.projectionMatrix.buffer, camera.projectionMatrix.byteOffset, camera.projectionMatrix.byteLength);
         this.device.queue.writeBuffer(this.uniformBuffer, 128, this.modelMatrix.buffer, this.modelMatrix.byteOffset, this.modelMatrix.byteLength);
