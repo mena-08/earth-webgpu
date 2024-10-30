@@ -18,32 +18,8 @@ import * as dat from 'dat.gui';
 let render2: Renderer;
 let sphere: Sphere;
 let sphereMarker: Sphere;
+let chat: ChatManager;
 
-// Define the Actions interface
-const settings = {
-    folder1: {
-        entry1: () => {
-            console.log('Button 1 in Folder 1 clicked');
-        },
-        entry2: () => {
-            console.log('Button 2 in Folder 1 clicked');
-        },
-        entry3: () => {
-            console.log('Button 3 in Folder 1 clicked');
-        },
-    },
-    folder2: {
-        entry1: () => { 
-            console.log('Button 1 in Folder 2 clicked'); 
-        },
-        entry2: () => { 
-            console.log('Button 2 in Folder 2 clicked'); 
-        },
-        entry3: () => { 
-            console.log('Button 3 in Folder 2 clicked'); 
-        },
-    },
-};
 
 // frontend/src/main.ts
 async function checkWebGPUSupport(): Promise<boolean> {
@@ -68,7 +44,7 @@ async function checkWebGPUSupport(): Promise<boolean> {
         return false;
     }
 
-    console.log("WebGPU is supported.");
+    console.log("WebGPU is supported...");
     return true;
 }
 
@@ -78,16 +54,13 @@ checkWebGPUSupport().then(async (supported) => {
         const deviceManager = GPUDeviceManager.getInstance();
         await deviceManager.initializeDevice();
         const device = deviceManager.getDevice();
-
+        
 
         //const render = new Renderer('gpuCanvas',  device);
         render2 = new Renderer('gpuCanvas2', device);
 
-        // console.log("THIS SHOULD BE LOADING");
         //  const loader = initDigitalElevationModel(device,[0,0,0],'geoTIFF/n19_w156_1arc_v3.tif');
-        //console.log(loader);
-        console.log("+++++++++++++++++++++");
-        // console.log(loader);
+        
 
         // render.onReady(async () => {
         //     const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
@@ -118,9 +91,6 @@ checkWebGPUSupport().then(async (supported) => {
         //     console.log(loader[1]);
         //     //try to use the dem stuff here:
 
-        //     console.log("Pkane:", plane);
-
-        //     //console.log("GPU device initialized.", render.getScene());
         //     //render.addObject(triangle);
         //     render.addObject(plane);
         //     // render.addObject(triangle3);
@@ -131,26 +101,33 @@ checkWebGPUSupport().then(async (supported) => {
             // const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
             // const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
             // const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
-            //console.log("GPU device initialized.", render.getScene());
             // render2.addObject(triangle);
             // render2.addObject(triangle2);
             // render2.addObject(triangle3);
             sphere = new Sphere(device, [0.0, 0.0, 0.0], 1.0);
-            const textureURLs = ['ocean/turtles/loggerhead_sea_turtles_track.m3u8', 'ocean/sea_surface_temperature/sea_surface_temperature.m3u8', 'ocean/phytoplankton/phytoplankton.m3u8', 'ocean/tsunami_japan/tsunami_japan.m3u8'];
+            const textureURLs = ['https://mena-08.github.io/conversational-website/assets/ocean/sea_surface_temperature/sea_surface_temperature.m3u8'];//, 'ocean/phytoplankton/phytoplankton.m3u8', 'ocean/tsunami_alaska/tsunami_alaska.m3u8'];
             const names = ['Loggerhead Sea Turtles', 'Sea Surface Temperature', 'Phytoplankton', 'Tsunami JAPAN'];
             sphere.loadMultipleTextures(textureURLs);
             // sphereMarker = new Sphere(device, [0.0, 0.0, 0.0], 0.01);
             // sphereMarker.loadTexture('red.jpg');
             const gui = new dat.GUI();
             const textureFolder = gui.addFolder('Datasets');
+            chat = new ChatManager('chat-input', 'send-btn', 'messages', render2.getCamera());
 
-            // Add buttons for each texture in the GUI
-            textureURLs.forEach((url, index) => {
-                textureFolder.add({ loadTexture: () => sphere.switchTextureByIndex(index+1) }, 'loadTexture').name(`${names[index]}`);
-            });
+            // // Add buttons for each texture in the GUI
+            // textureURLs.forEach((url, index) => {
+            //     textureFolder.add({ loadTexture: async () =>{ 
+            //         sphere.switchTextureByIndex(index);
+            //         let x:string = '';
+            //         x = `https://mena-08.github.io/conversational-website/assets/${url.replace('.m3u8', '.txt')}`;
+                    
+            //         chat.getContextManager().setDatasetFromString(x);
+            //     } }, 'loadTexture').name(`${names[index]}`);
+                
+            // });
 
-            // Optionally open the folder by default
-            textureFolder.open();
+            // // Optionally open the folder by default
+            // textureFolder.open();
 
             // const gui = new dat.GUI();
             // const folder1 = gui.addFolder('Ocean Datasets');
@@ -166,13 +143,23 @@ checkWebGPUSupport().then(async (supported) => {
             // folder2.add(settings.folder2, 'entry2').name('Tsunami of ALASKA');
             // folder2.add(settings.folder2, 'entry3').name('TESTING');
 
+            sphereMarker = new Sphere(device, [0.0, 0.0, 0.0], 0.01);
+            //THIS ONE IS FOR DEPLOYMENT
+            //sphereMarker.loadTexture('/conversational-website/assets/red.jpg');
+
+            //THIS ONE IS FOR LOCAL TESTING
+            sphereMarker.loadTexture('red.jpg');
             //render2.getCamera().setSphericalPosition(1.5, -25.274398, 133.775136);
             //this.camera.setSphericalPosition(2.0, 35.682839, 139.759455);
             //this.scene.addObject(sphere);
             //this.scene.addObject(plane);
             //sphere.loadTexture('base_map.jpg');
             //sphere.loadTexture('base_map_normal.jpg');
-            sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
+
+            //this one is for deployment
+            //sphere.loadTexture('/conversational-website/assets/ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
+            //this one is for local testing
+            //sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
 
             //sphere.loadTexture('ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
             //render2.addObject(sphereMarker);
@@ -182,7 +169,7 @@ checkWebGPUSupport().then(async (supported) => {
         //render.getScene
         new ChatManager('chat-input', 'send-btn', 'messages', render2.getCamera());
     } else {
-        console.log("Rendering engine cannot be loaded due to lack of WebGPU support.");
+        alert("WebGPU not supported on this browser. Engine not loaded...");
     }
 });
 

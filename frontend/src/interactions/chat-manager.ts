@@ -15,12 +15,10 @@ export class ChatManager {
 
     constructor(inputId: string, buttonId: string, containerId: string, camera: Camera) {
         this.camera = camera;
-        console.log(this.camera);
         this.inputElement = document.getElementById(inputId) as HTMLInputElement;
         this.sendButton = document.getElementById(buttonId) as HTMLButtonElement;
         this.messagesContainer = document.getElementById(containerId) as HTMLDivElement;
         this.contextManager = new ContextManager();
-        //this.contextManager.setDatasetFromString;
         this.setupListeners();
     }
 
@@ -69,7 +67,6 @@ export class ChatManager {
         if (message) {
             try {
                 const response = await sendToServer(message);
-                console.log("WHAT IS THIS RESPONSE:", response);
                 const parsedValues = this.extractValuesFromResponse(response);
                 if (parsedValues) {
                     if (typeof parsedValues[0] === 'number' && typeof parsedValues[1] === 'number') {
@@ -77,11 +74,8 @@ export class ChatManager {
                         sphere.latLongToSphereCoords(1, parsedValues[0], parsedValues[1]);
                         const vec = sphere.latLongToSphereCoords(1, parsedValues[0], parsedValues[1]);
                         sphereMarker.updatePosition([vec[0], vec[1], vec[2]]);
-                        console.log("THIS SHOULD BE RED SPHERE COORD", sphere.latLongToSphereCoords(1, parsedValues[0], parsedValues[1]));
             
                     } else if (typeof parsedValues[0] === 'string' && typeof parsedValues[1] === 'number') {
-                        console.log("THIS IS THE AXIS:", parsedValues[0]);
-                        console.log("THIS IS THE VALUE:", parsedValues[1]);
                         let axisVector: [number, number, number];
                         switch (parsedValues[0]) {
                             case 'x':
@@ -114,9 +108,7 @@ export class ChatManager {
     private extractValuesFromResponse(response: string): number[] | [string, number] | null {
         // Match for [float, float], [float, float, float], or ['axis', float]
         const matchFloatArray = response.match(/\[(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)(?:,\s*(-?\d+(?:\.\d+)?))?\]/);
-        console.log("THIS SHOULD BE AN ARRAY", matchFloatArray?.slice(1).filter(Boolean).map(Number));
         const matchAxisArray = response.match(/\[(\w+),\s*(-?\d+(?:\.\d+)?)\]/);
-        console.log("THIS SHOULD BE AN AXIS", matchFloatArray?.slice(1).filter(Boolean).map(Number));
         
         // Handle [float, float] or [float, float, float]
         if (matchFloatArray) {
@@ -141,7 +133,6 @@ export class ChatManager {
         new_message_div.textContent ="Me: "+ message + "\n";
         this.messagesContainer.appendChild(new_message_div);
         this.scrollToBottom();
-        console.log(this.contextManager.getFullConversation());
     }
 
     private displaySystemMessage(message: string) {
@@ -160,7 +151,10 @@ export class ChatManager {
     }
     
     private getCameraContext() {
-        console.log(this.camera);
         this.contextManager.setCoordinates(this.camera.getSphericalCoordinates().latitude, this.camera.getSphericalCoordinates().longitude);
+    }
+
+    getContextManager(): ContextManager {
+        return this.contextManager;
     }
 }

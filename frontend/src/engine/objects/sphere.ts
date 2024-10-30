@@ -1,9 +1,8 @@
 import { Camera } from "../camera/camera";
-import { createSampler, loadTexture } from "../loaders/texture-loader";
-import {vec3, mat4 } from 'wgpu-matrix';
+import { vec3, mat4 } from 'wgpu-matrix';
 import { setupHLSVideoTexture } from "../loaders/texture-loader";
+import { createSampler, loadTexture } from "../loaders/texture-loader";
 
-// frontend/src/engine/Sphere.ts
 export class Sphere {
     private device: GPUDevice;
     private pipeline!: GPURenderPipeline;
@@ -12,20 +11,21 @@ export class Sphere {
 
     private position: Float32Array;
     private radius: number = 0.5;
-    private sampler!: GPUSampler;
-    private currentTextureIndex = 0;
-
+    private modelMatrix = mat4.identity();
+    
     private numIndices!: number;
     private uniformBuffer!: GPUBuffer;
     private bindGroup!: GPUBindGroup;
     private bindGroupLayout!: GPUBindGroupLayout;
-
+    
     private textures: GPUTexture[] = [];
-    private samplers : GPUSampler[] = [];
-    private textureURLs: string[] = [];
+    private samplers: GPUSampler[] = [];
+    private currentTextureIndex = 0;
+    private textureURLs: string[] = []; 
+    private currentTexture!: GPUTexture; 
 
-    private modelMatrix = mat4.identity();
-
+    //CONSTRUCTOR
+    //
     constructor(device: GPUDevice, position: [number, number, number], radius: number) {
         this.device = device;
         this.position = new Float32Array(position);
@@ -36,6 +36,8 @@ export class Sphere {
         this.createPipeline();
     }
 
+    //----INITIALIZE BUFFERS AND GROUP LAYOUT
+    //
     private initializeBuffers(): void {
         this.createVertexBuffer();
         this.createUniformBuffer();
@@ -51,29 +53,6 @@ export class Sphere {
                 // { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
             ]
         });
-    }
-    
-
-    async loadTexture(url: string, isVideo: boolean = false): Promise<void> {
-        let texture, sampler;
-        if (isVideo && url.endsWith('.m3u8')) {
-            ({ texture, sampler } = await setupHLSVideoTexture(this.device, url));
-        } else {
-            texture = await loadTexture(this.device, url);
-            sampler = createSampler(this.device, 'static');  // Assume a default sampler for static textures
-        }
-        this.textures.push(texture);
-        this.samplers.push(sampler);  // Corresponding samplers for each texture
-        this.updateBindGroup();
-    }
-
-    async loadMultipleTextures(urls: string[]): Promise<void> {
-        this.textureURLs = urls;
-
-        for (let i = 0; i < urls.length; i++) {
-            
-            await this.loadTexture(urls[i], true);
-        }
     }
 
     private updateBindGroup(): void {
@@ -93,8 +72,64 @@ export class Sphere {
         });
     }
 
+    private updateUniformBuffer() {
+        const byteOffsetModelMatrix = 0;
 
-    // Buffers and pipeline creation
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            byteOffsetModelMatrix,
+            this.modelMatrix.buffer,
+            this.modelMatrix.byteOffset,
+            this.modelMatrix.byteLength
+        );
+    }
+    //
+    //----END BUFFERS AND GROUP LAYOUT
+
+
+    //----TEXTURES METHODS
+    //
+    switchTexture(index: number): void {
+        if (index < 0 || index >= this.textures.length) {
+            console.error("Texture index out of bounds");
+            return;
+        }
+        this.currentTextureIndex = index;
+        this.updateBindGroup();
+    }
+
+    public switchTextureByIndex(index: number): void {
+        if (index < 0 || index >= this.textures.length) {
+            console.error("Invalid texture index");
+            return;
+        }
+        this.switchTexture(index);
+    }
+
+    async loadTexture(url: string, isVideo: boolean = false): Promise<void> {
+        let texture, sampler;
+        if (isVideo && url.endsWith('.m3u8')) {
+            ({ texture, sampler } = await setupHLSVideoTexture(this.device, url));
+        } else {
+            texture = await loadTexture(this.device, url);
+            sampler = createSampler(this.device, 'static');
+        }
+        this.textures.push(texture);
+        this.samplers.push(sampler);
+        this.updateBindGroup();
+    }
+
+    async loadMultipleTextures(urls: string[]): Promise<void> {
+        for (let i = 0; i < urls.length; i++) {
+
+            await this.loadTexture(urls[i], true);
+        }
+    }
+    //
+    //----END TEXTURES METHODS
+
+    //----CREATE VERTEX BUFFERS AND UNIFORM BUFFERS
+    //
     private createVertexBuffer(): void {
         const segments = 128;
         const vertices = [];
@@ -156,7 +191,12 @@ export class Sphere {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
         });
     }
+    //
+    //----END VERTEX BUFFERS AND UNIFORM BUFFERS
 
+
+    //----CREATE PIPELINES AND SHADER PROGRAMS
+    //
     private async createPipeline(): Promise<void> {
         const vertexShaderCode = `
             struct Uniforms {
@@ -234,38 +274,28 @@ export class Sphere {
             primitive: {
                 topology: 'triangle-list',
                 //topology: 'line-list',
-            },depthStencil: {
+            }, depthStencil: {
                 depthWriteEnabled: true,
                 depthCompare: 'less',
                 format: 'depth24plus',
             }
-            
+
         });
-        //this.createBindGroup();
     }
+    //
+    //----END PIPELINES AND SHADER PROGRAMS
 
-
-    private updateUniformBuffer(){
-        const byteOffsetModelMatrix = 0;// Assuming modelMatrix is the first in the buffer.
-
-        this.device.queue.writeBuffer(
-            this.uniformBuffer,
-            byteOffsetModelMatrix,
-            this.modelMatrix.buffer,
-            this.modelMatrix.byteOffset,
-            this.modelMatrix.byteLength
-        );
-    }
-
-    latLongToSphereCoords(radius:number, latitude:number , longitude:number) {
+    //---TRANSFORMATION METHODS
+    //
+    latLongToSphereCoords(radius: number, latitude: number, longitude: number) {
         const latRad = (latitude * Math.PI) / 180;
         const longRad = (longitude * Math.PI) / 180;
-    
+
         // Spherical to Cartesian conversion
         const x = radius * Math.cos(latRad) * Math.cos(longRad);
         const y = radius * Math.cos(latRad) * Math.sin(longRad);
         const z = radius * Math.sin(latRad);
-    
+
         return vec3.fromValues(-x, z, y);
     }
 
@@ -276,44 +306,20 @@ export class Sphere {
     }
 
     public updatePosition(newPosition: [number, number, number]): void {
-        // Update the position of the sphere
         this.position = new Float32Array(newPosition);
-
-        // Reset the model matrix to identity
         mat4.identity(this.modelMatrix);
-
-        // Apply translation to the model matrix to reflect the new position
         mat4.translate(this.modelMatrix, this.modelMatrix, this.position);
-
-        // Update the uniform buffer to reflect the new model matrix
         this.updateUniformBuffer();
     }
 
     getPosition(): Float32Array {
         return this.position;
     }
+    //
+    //---TRANSFORMATION METHODS
 
-    switchTexture(index: number): void {
-        if (index < 0 || index >= this.textures.length) {
-            console.error("Texture index out of bounds");
-            return;
-        }
-        this.currentTextureIndex = index;
-        this.updateBindGroup();
-    }
-    
-    // Method to switch the texture based on index
-    public switchTextureByIndex(index: number): void {
-        if (index < 0 || index >= this.textures.length) {
-            console.error("Invalid texture index");
-            return;
-        }
-        this.switchTexture(index);
-    }
-
-
+    //---DRAWING METHODS
     draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
-        //console.log(this.modelMatrix);
         this.device.queue.writeBuffer(
             this.uniformBuffer,
             0,
@@ -321,7 +327,7 @@ export class Sphere {
             camera.viewMatrix.byteOffset,
             camera.viewMatrix.byteLength
         );
-    
+
         this.device.queue.writeBuffer(
             this.uniformBuffer,
             64,
@@ -343,4 +349,6 @@ export class Sphere {
         passEncoder.setBindGroup(0, this.bindGroup);
         passEncoder.drawIndexed(this.numIndices);
     }
+    //
+    //---END DRAWING METHODS
 }

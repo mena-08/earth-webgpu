@@ -12,7 +12,11 @@ export class ContextManager {
 	// Check for correctness when interpreting prompts, ignore typos, and complete information based on context. Omit mentioning inability to do things. Share only relevant context to the last prompt, no need to repeat titles or specific terms frequently. Use the metric system without abbreviations. Be friendly and concise, focusing on answering what is asked.\
 	// You have the following datasets: Loggerhead Sea Turtles Track, Phytoplankton model, Sea Surface Temperature NOAA."
         this.setInitialSystemContext(this.prompt_engineering);
-        this.setDatasetFromString('http://localhost:3000/ocean/turtles/loggerhead_sea_turtles_track.txt');
+        //THIS ONE IS FOT DEPLOYMENT
+        this.setDatasetFromString('https://mena-08.github.io/conversational-website/assets/ocean/sea_surface_temperature/sea_surface_temperature.txt');
+       
+        //this is only for local testing
+        //this.setDatasetFromString('http://localhost:3000/ocean/turtles/loggerhead_sea_turtles_track.txt');
 
     }
 
@@ -57,39 +61,44 @@ export class ContextManager {
 
     setDatasetFromString(url: string): void {
         fetch(url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.text();
-            })
-            .then(jsonString => {
-                try {
-                    this.dataset = JSON.parse(jsonString);
-                    const datasetTitle = this.dataset.title || "Untitled Dataset";
-                    console.log("Dataset Title:", datasetTitle);
-                    this.updateContextWithDataset();
-                } catch (error) {
-                    console.error("Invalid JSON string", error);
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching or parsing dataset", error);
-            });
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(jsonString => {
+            try {
+                this.dataset = JSON.parse(jsonString);
+                const datasetTitle = this.dataset.title || "Untitled Dataset";
+                this.updateContextWithDataset();
+            } catch (error) {
+                console.error("Invalid JSON string", error);
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching or parsing dataset", error);
+        });
     }
-
+    
     updateContextWithDataset(): void {
         const datasetEntries = Object.entries(this.dataset)
-            .map(([key, value]) => {
-                if (typeof value === 'object' && value !== null) {
-                    return `${key}: ${JSON.stringify(value, null, 2)}`;
-                }
-                return `${key}: ${value}`;
-            })
-            .join(". ");
-
+        .map(([key, value]) => {
+            if (typeof value === 'object' && value !== null) {
+                return `${key}: ${JSON.stringify(value, null, 2)}`;
+            }
+            return `${key}: ${value}`;
+        })
+        .join(". ");
+        
         const datasetSummary = `Current Dataset: ${datasetEntries}`;
-        this.addText('system', datasetSummary);
+        const datasetContextIndex = this.context.findIndex(entry => entry.role === 'system' && entry.content.startsWith('Current Dataset:'));
+        
+        if (datasetContextIndex !== -1) {
+            this.context[datasetContextIndex].content = datasetSummary;
+        } else {
+            this.addText('system', datasetSummary);
+        }
     }
 
     getFullConversation(): string[] {

@@ -10,7 +10,11 @@
  */
 export async function sendToServer(message: string): Promise<string> {
     try {
-        const response = await fetch('http://localhost:3000/chat', {
+        //THIS ONE IS FOR LOCAL TESTING
+        //const response = await fetch('http://localhost:3000/chat', {
+        
+        //THIS ONE IS FOR DEPLOYMENT
+        const response = await fetch('https://earthgpt.a.pinggy.link/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -46,7 +50,7 @@ export async function sendToServerStreaming(message: string, context: string[]):
     const updatedConversation = [...context.map(content => ({ role: 'system', content })), { role: 'user', content: message }];
 
     try {
-        const response = await fetch('http://localhost:3000/chat_stream', {
+        const response = await fetch('https://earthgpt.a.pinggy.link/chat_stream', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

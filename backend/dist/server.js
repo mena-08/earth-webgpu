@@ -39,7 +39,7 @@ app.use(express_1.default.urlencoded({ extended: true }));
 // Serve static files from the frontend/public directory
 app.use(express_1.default.static(path_1.default.join(__dirname, '../../frontend/public')));
 app.get('/', (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, '../../frontend/index.html'));
+    res.sendFile(path_1.default.join(__dirname, '../../frontend/public/index.html'));
 });
 app.post('/chat', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { conversation } = req.body;

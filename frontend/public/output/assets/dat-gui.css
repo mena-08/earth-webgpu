@@ -1,0 +1,40 @@
+/* Targeting the entire dat.GUI panel */
+.dg.ac {
+    font-family: Arial, sans-serif;  /* Change font */
+    font-size: 15px;  /* Change font size */
+    width: 300px;  /* Set custom width */
+}
+
+/* Customizing the labels */
+.dg.ac li.cr.string .property-name, 
+.dg.ac li.cr.number .property-name,
+.dg.ac li.cr.boolean .property-name {
+    font-size: 15px;  /* Font size for labels */
+    font-weight: bold;  /* Bold labels */
+}
+
+/* Customizing input text box */
+.dg.ac li.cr input[type="text"] {
+    font-size: 12px;  /* Font size for text input */
+    padding: 5px;  /* Padding around text */
+}
+
+/* Customizing the buttons */
+.dg.ac .c input[type="button"] {
+    font-size: 12px;  /* Font size for button text */
+    padding: 8px 16px;  /* Size of buttons */
+    border-radius: 5px;  /* Rounded corners */
+    background-color: #4CAF50;  /* Background color of buttons */
+    color: white;  /* Text color */
+}
+
+/* Adjusting folder title size */
+.dg.ac .folder .title {
+    font-size: 16px;  /* Font size for folder titles */
+    padding: 5px;  /* Padding around folder titles */
+}
+
+/* Optional: Add hover effect on buttons */
+.dg.ac .c input[type="button"]:hover {
+    background-color: #45a049;
+}

@@ -34,7 +34,7 @@ export class CameraControls {
 
     handleMouseUp = (): void => {
         this.isMouseDown = false;
-        console.log(this.camera.getSphericalCoordinates());
+        //console.log(this.camera.getSphericalCoordinates());
     }
 
     handleMouseMove = (event: MouseEvent): void => {

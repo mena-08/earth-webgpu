@@ -94,7 +94,7 @@
 /* Messages container styling */
 #messages {
     overflow-y: auto;
-    height: 700px; /* Increased height */
+    height: 400px; /* Increased height */
 }
 
 /* Custom scrollbar for messages */

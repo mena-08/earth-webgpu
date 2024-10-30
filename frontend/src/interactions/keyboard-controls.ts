@@ -27,7 +27,6 @@ export class KeyboardControls {
     private handleQKey(): void {
         //THIS IS JUST FOR TESTING STUFF
         this.scene.getObjectById('object-0').switchTexture((this.scene.getObjectById('object-0').currentTextureIndex + 1) % this.scene.getObjectById('object-0').textures.length);
-        console.log(this.scene.getObjectById('object-0'));
-        console.log("Q key pressed");
+        //console.log(this.scene.getObjectById('object-0'));
     }
 }

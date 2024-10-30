@@ -104,7 +104,7 @@ export function createSampler(device: GPUDevice, type: 'static' | 'video'): GPUS
         return device.createSampler({
             magFilter: 'nearest',
             minFilter: 'nearest',
-            mipmapFilter: 'nearest',
+            mipmapFilter: 'linear',
             addressModeU: 'clamp-to-edge',
             addressModeV: 'clamp-to-edge'
         });

@@ -37,7 +37,6 @@ export class Renderer {
             const triwangle = new Triangle(this.device, [1.0, 0.0, 0.0, 1.0], [0.5, 0.5, 0.0]);
             // const sphere = new Sphere(this.device, [0.0, 0.0, 0.0], 1.0);
             
-            // console.log("Triangle:", triwangle);
             // //this.scene.addObject(sphere);
             // //this.scene.addObject(plane);
             // sphere.loadTexture('base_map.jpg');
@@ -76,7 +75,7 @@ export class Renderer {
     }
 
     public addObject(object: any): void {
-        console.log("Object being added:", this.scene);
+        console.log("Object being added: ", this.scene," ...");
         this.scene.addObject(object);
         this.needsRedraw = true;
         }
