@@ -62,7 +62,7 @@ checkWebGPUSupport().then(async (supported) => {
                 60, 60, 60, 60, 10, 10, 10, 10
             ];
             
-            const plane = new Plane(device, [0.0, 0.0, 0.0], 3, 3, 3601, 3601);
+            const plane = new Plane(device, [0.0, 0.0, 0.0], 3, 3, 3600, 3600);
             //const loader = await initDigitalElevationModel('geoTIFF/agri-medium-dem.tif');
             const loader = await initDigitalElevationModel('geoTIFF/n19_w156_1arc_v3.tif');
             plane.rotate([1.0,0.0,0.0],-Math.PI / 2);

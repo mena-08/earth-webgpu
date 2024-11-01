@@ -638,18 +638,19 @@ export class Plane {
         // Create index buffer for triangle strip with degenerate vertices between rows
         const indices = [];
         for (let iy = 0; iy < gridY; iy++) {
+            // First row: left to right
             for (let ix = 0; ix < gridX1; ix++) {
-                indices.push(iy * gridX1 + ix);         // Top vertex of the quad
-                indices.push((iy + 1) * gridX1 + ix);   // Bottom vertex of the quad
+                indices.push(iy * gridX1 + ix);
+                indices.push((iy + 1) * gridX1 + ix);
             }
-
-            // Insert degenerate vertices at the end of the row, except for the last row
+        
+            // Add degenerate vertices to avoid unwanted connections
             if (iy < gridY - 1) {
-                indices.push((iy + 1) * gridX1 + gridX1 - 1);  // Repeat last vertex of the row
-                indices.push((iy + 1) * gridX1);               // First vertex of the next row
+                indices.push((iy + 1) * gridX1 + gridX1 - 1);
+                indices.push((iy + 1) * gridX1); // Move to start of next row
             }
         }
-
+        
         this.numIndices = indices.length;
 
         // Create the vertex buffer
@@ -705,23 +706,25 @@ export class Plane {
             }
             @fragment
             fn fs_main(@location(1) zValue: f32) -> @location(0) vec4<f32> {
-            let t = clamp((zValue - zRange.x) / (zRange.y - zRange.x), 0.0, 1.0);
-                    
-                    // Define the colors: purple (bottom), yellow (mid), red (top)
-                    let purple = vec3<f32>(0.5, 0.0, 0.5);
-                    let yellow = vec3<f32>(1.0, 1.0, 0.0);
-                    let red = vec3<f32>(1.0, 0.0, 0.0);
+                let t = clamp((zValue - zRange.x) / (zRange.y - zRange.x), 0.0, 1.0);
 
-                    // Interpolate between purple and yellow for t < 0.5, and yellow and red for t >= 0.5
-                    let color = mix(
-                        interpolateColor(purple, yellow, t * 2.0), // Bottom to mid
-                        interpolateColor(yellow, red, (t - 0.5) * 2.0), // Mid to top
-                        step(0.5, t) // Switch interpolation based on the midpoint
-                    );
+                if (t < 0.1) {
+                    discard;
+                }
+                
+                // Define the colors: purple (bottom), yellow (mid), red (top)
+                let purple = vec3<f32>(0.5, 0.0, 0.5);
+                let yellow = vec3<f32>(1.0, 1.0, 0.0);
+                let red = vec3<f32>(1.0, 0.0, 0.0);
 
-                    return vec4<f32>(color, 1.0);
+                // Interpolate between purple and yellow for t < 0.5, and yellow and red for t >= 0.5
+                let color = mix(
+                    interpolateColor(purple, yellow, t * 2.0), // Bottom to mid
+                    interpolateColor(yellow, red, (t - 0.5) * 2.0), // Mid to top
+                    step(0.5, t) // Switch interpolation based on the midpoint
+                );
 
-
+                return vec4<f32>(color, 1.0);
             }`;
         
 
@@ -743,7 +746,7 @@ export class Plane {
                 entryPoint: "fs_main",
                 targets: [{ format: 'bgra8unorm' }]
             },
-            primitive: { topology: 'triangle-strip', stripIndexFormat: 'uint32' },
+            primitive: { topology: 'point-list'},//, stripIndexFormat: 'uint32' },
             depthStencil: { depthWriteEnabled: true, depthCompare: 'less', format: 'depth24plus' }
         });
     }
@@ -772,7 +775,7 @@ export class Plane {
         // Update vertex buffer with new elevations
         this.device.queue.writeBuffer(this.vertexBuffer, 0, this.vertices);
     }
-    
+
 
     draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
         if (!this.bindGroup) {
