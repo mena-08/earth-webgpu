@@ -12,7 +12,7 @@ export class Scene {
         this.device = device;
         this.objects = new Map();
         this.nextId = 0;
-        console.log("Scene created.");
+        console.log("Scene created...");
     }
 
     addObject(object: any): string {

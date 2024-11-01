@@ -54,120 +54,36 @@ checkWebGPUSupport().then(async (supported) => {
         const deviceManager = GPUDeviceManager.getInstance();
         await deviceManager.initializeDevice();
         const device = deviceManager.getDevice();
+        const render = new Renderer('gpuCanvas',  device);      
         
+        render.onReady(async () => {
+            const slopeArray = [
+                0, 0, 10, 10, 26, 26, 26, 26,
+                60, 60, 60, 60, 10, 10, 10, 10
+            ];
+            
+            const plane = new Plane(device, [0.0, 0.0, 0.0], 3, 3, 3601, 3601);
+            //const loader = await initDigitalElevationModel('geoTIFF/agri-medium-dem.tif');
+            const loader = await initDigitalElevationModel('geoTIFF/n19_w156_1arc_v3.tif');
+            plane.rotate([1.0,0.0,0.0],-Math.PI / 2);
+            console.log("width:", loader[0]);
+            console.log("height:", loader[1]);
+            // //plane.loadTexture('geotiff/agri-medium-autumn.jpg');
+            // //plane.setMode(1);
 
-        //const render = new Renderer('gpuCanvas',  device);
-        render2 = new Renderer('gpuCanvas2', device);
+            if (typeof loader[2] !== 'number') {
+                loader[2].readRasters({interleave: true}).then((rasters: any) => {
+                console.log("RASTERS:", rasters.length);
+                plane.laodElevationData(rasters);
+                //plane.applyElevationData(rasters);
+                //plane.laodElevationData(new Float32Array(slopeArray));
+                });
+            }
 
-        //  const loader = initDigitalElevationModel(device,[0,0,0],'geoTIFF/n19_w156_1arc_v3.tif');
-        
-
-        // render.onReady(async () => {
-        //     const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
-        //     const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
-        //     const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
-
-
-        //     //render.addObject(sphere);
-
-        //     const plane = new Plane(device, [0.0, 0.0, 10.0], 4, 3, 1253, 979);
-
-        //     const loader = await initDigitalElevationModel(device,[0,0,0],'geoTIFF/agri-medium-dem.tif');
-        //     //const loader = await initDigitalElevationModel(device,[0,0,0],'geoTIFF/n19_w156_1arc_v3.tif');
-        //     console.log("width:", loader[0]);
-        //     console.log("height:", loader[1]);
-        //     plane.loadTexture('geotiff/agri-medium-autumn.jpg');
-        //     plane.setMode(1);
-
-        //     loader[2].readRasters({interleave: true}).then((rasters: any) => {
-        //         console.log("RASTERS:", rasters.length);
-
-        //         plane.applyElevationData(rasters);
-        //         plane.rotate([1, 0, 0], -Math.PI/2);
-        //         //plane.loadTexture('geotiff/agri-medium-autumn.jpg');
-        //     });
-
-        //     //console.log("WHATS THIIIS", );
-        //     console.log(loader[1]);
-        //     //try to use the dem stuff here:
-
-        //     //render.addObject(triangle);
-        //     render.addObject(plane);
-        //     // render.addObject(triangle3);
-        // });
-
-
-        render2.onReady(() => {
-            // const triangle = new Triangle(device, [1.0, 0.0, 0.0, 1.0], [0.5, 2.0, 2.0]);
-            // const triangle2 = new Triangle(device, [1.0, 0.0, 1.0, 1.0], [0.5, 1.0, 0.0]);
-            // const triangle3 = new Triangle(device, [0.0, 0.0, 1.0, 1.0], [1.0, 0.5, 0.0]);
-            // render2.addObject(triangle);
-            // render2.addObject(triangle2);
-            // render2.addObject(triangle3);
-            sphere = new Sphere(device, [0.0, 0.0, 0.0], 1.0);
-            const textureURLs = ['https://mena-08.github.io/conversational-website/assets/ocean/sea_surface_temperature/sea_surface_temperature.m3u8'];//, 'ocean/phytoplankton/phytoplankton.m3u8', 'ocean/tsunami_alaska/tsunami_alaska.m3u8'];
-            const names = ['Loggerhead Sea Turtles', 'Sea Surface Temperature', 'Phytoplankton', 'Tsunami JAPAN'];
-            sphere.loadMultipleTextures(textureURLs);
-            // sphereMarker = new Sphere(device, [0.0, 0.0, 0.0], 0.01);
-            // sphereMarker.loadTexture('red.jpg');
-            const gui = new dat.GUI();
-            const textureFolder = gui.addFolder('Datasets');
-            chat = new ChatManager('chat-input', 'send-btn', 'messages', render2.getCamera());
-
-            // // Add buttons for each texture in the GUI
-            // textureURLs.forEach((url, index) => {
-            //     textureFolder.add({ loadTexture: async () =>{ 
-            //         sphere.switchTextureByIndex(index);
-            //         let x:string = '';
-            //         x = `https://mena-08.github.io/conversational-website/assets/${url.replace('.m3u8', '.txt')}`;
-                    
-            //         chat.getContextManager().setDatasetFromString(x);
-            //     } }, 'loadTexture').name(`${names[index]}`);
-                
-            // });
-
-            // // Optionally open the folder by default
-            // textureFolder.open();
-
-            // const gui = new dat.GUI();
-            // const folder1 = gui.addFolder('Ocean Datasets');
-            // const folder2 = gui.addFolder('Land Datasets');
-            // // Add 5 entries to each folder
-            // // Add buttons to Folder 1
-            // folder1.add(settings.folder1, 'entry1').name('Loggerhead Sea Turtles');
-            // folder1.add(settings.folder1, 'entry2').name('Sea Surface Temperature');
-            // folder1.add(settings.folder1, 'entry3').name('Phytoplankton');
-
-            // // Add buttons to Folder 2
-            // folder2.add(settings.folder2, 'entry1').name('Tsunami of JAPAN');
-            // folder2.add(settings.folder2, 'entry2').name('Tsunami of ALASKA');
-            // folder2.add(settings.folder2, 'entry3').name('TESTING');
-
-            sphereMarker = new Sphere(device, [0.0, 0.0, 0.0], 0.01);
-            //THIS ONE IS FOR DEPLOYMENT
-            //sphereMarker.loadTexture('/conversational-website/assets/red.jpg');
-
-            //THIS ONE IS FOR LOCAL TESTING
-            sphereMarker.loadTexture('red.jpg');
-            //render2.getCamera().setSphericalPosition(1.5, -25.274398, 133.775136);
-            //this.camera.setSphericalPosition(2.0, 35.682839, 139.759455);
-            //this.scene.addObject(sphere);
-            //this.scene.addObject(plane);
-            //sphere.loadTexture('base_map.jpg');
-            //sphere.loadTexture('base_map_normal.jpg');
-
-            //this one is for deployment
-            //sphere.loadTexture('/conversational-website/assets/ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
-            //this one is for local testing
-            //sphere.loadTexture('ocean/turtles/loggerhead_sea_turtles_track.m3u8', true);
-
-            //sphere.loadTexture('ocean/sea_surface_temperature/sea_surface_temperature.m3u8', true);
-            //render2.addObject(sphereMarker);
-            render2.addObject(sphere);
+            // console.log(loader[1]);
+            render.addObject(plane);
         });
 
-        //render.getScene
-        new ChatManager('chat-input', 'send-btn', 'messages', render2.getCamera());
     } else {
         alert("WebGPU not supported on this browser. Engine not loaded...");
     }

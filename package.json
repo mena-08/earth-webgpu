@@ -25,6 +25,7 @@
     "geotiff": "^2.1.3",
     "hls.js": "^1.5.14-0.canary.10629",
     "rollup-plugin-postcss": "^4.0.2",
+    "webgpu-utils": "^1.9.3",
     "wgpu-matrix": "^3.1.0"
   }
 }

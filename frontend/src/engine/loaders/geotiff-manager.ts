@@ -15,7 +15,7 @@ async function parseGeoTIFF(arrayBuffer: ArrayBuffer): Promise<GeoTIFFImage> {
   return image;
 }
 
-export async function initDigitalElevationModel(device: GPUDevice, position: [number, number, number], url: string) {
+export async function initDigitalElevationModel(url: string) {
     try {
         const arrayBuffer = await fetchGeoTIFF(url);
         const elevationData = await parseGeoTIFF(arrayBuffer);
