@@ -26,35 +26,36 @@ export class ChatManager {
         this.sendButton.addEventListener('click', () => {
             this.sendMessageAndInstruction().catch(console.error);
         });
-    
+
         this.inputElement.addEventListener('keypress', async (event: KeyboardEvent) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                this.displayUserMessage(this.inputElement.value);
                 await this.sendMessageAndInstruction().catch(console.error);
             }
         });
     }
-    
+
     private async sendMessageAndInstruction() {
         await Promise.all([
             this.sendInstruction(),
             this.sendMessage()
         ]);
     }
-    
+
 
     private async sendMessage(): Promise<void> {
         const message = this.inputElement.value.trim();
         this.getCameraContext();
         if (message) {
+            this.displayUserMessage(this.inputElement.value);
             this.inputElement.value = '';
             this.contextManager.updateUserContext(message);
 
             try {
                 const response = await sendToServerStreaming(message, this.contextManager.getFullConversation());
                 this.contextManager.updateSystemContext(response);
-                this.displaySystemMessage(response);
+                console.log("Response: ", response.trim());
+                this.displaySystemMessage(response.trim());
             } catch (error) {
                 console.error('Error sending message:', error);
             }
@@ -70,11 +71,14 @@ export class ChatManager {
                 const parsedValues = this.extractValuesFromResponse(response);
                 if (parsedValues) {
                     if (typeof parsedValues[0] === 'number' && typeof parsedValues[1] === 'number') {
+                        if (parsedValues[0] == 0 && parsedValues[1] == 0) {
+                            return;
+                        }
                         render2.getCamera().setSphericalPosition(1.5, parsedValues[0], parsedValues[1]);
                         sphere.latLongToSphereCoords(1, parsedValues[0], parsedValues[1]);
                         const vec = sphere.latLongToSphereCoords(1, parsedValues[0], parsedValues[1]);
                         sphereMarker.updatePosition([vec[0], vec[1], vec[2]]);
-            
+
                     } else if (typeof parsedValues[0] === 'string' && typeof parsedValues[1] === 'number') {
                         let axisVector: [number, number, number];
                         switch (parsedValues[0]) {
@@ -92,8 +96,7 @@ export class ChatManager {
                                 return;
                         }
                         sphere.rotate(axisVector, parsedValues[1]);
-                        
-                        // render2.getCamera().setAxisValue(parsedValues[0], parsedValues[1]);
+
                     }
                 } else {
                     console.error('Parsed values are null');
@@ -109,13 +112,13 @@ export class ChatManager {
         // Match for [float, float], [float, float, float], or ['axis', float]
         const matchFloatArray = response.match(/\[(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)(?:,\s*(-?\d+(?:\.\d+)?))?\]/);
         const matchAxisArray = response.match(/\[(\w+),\s*(-?\d+(?:\.\d+)?)\]/);
-        
+
         // Handle [float, float] or [float, float, float]
         if (matchFloatArray) {
             const values = matchFloatArray.slice(1).filter(Boolean).map(Number);
             return values as number[]; // Can be [float, float] or [float, float, float]
         }
-        
+
         // Handle ['axis', float]
         if (matchAxisArray) {
             const axis = matchAxisArray[1];
@@ -130,7 +133,7 @@ export class ChatManager {
     private displayUserMessage(message: string) {
         const new_message_div = document.createElement('div');
         new_message_div.className = 'message-bubble';
-        new_message_div.textContent ="Me: "+ message + "\n";
+        new_message_div.textContent = "Me: " + message + "\n";
         this.messagesContainer.appendChild(new_message_div);
         this.scrollToBottom();
     }
@@ -138,9 +141,9 @@ export class ChatManager {
     private displaySystemMessage(message: string) {
         const new_message_div = document.createElement('div');
         new_message_div.className = 'message-bubble-GPT';
-        new_message_div.textContent ="GPT: "+ message + "\n";
-        this.scrollToBottom();
+        new_message_div.textContent = "GPT: " + message + "\n";
         this.messagesContainer.appendChild(new_message_div);
+        this.scrollToBottom();
     }
 
     private scrollToBottom() {
@@ -149,7 +152,7 @@ export class ChatManager {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
     }
-    
+
     private getCameraContext() {
         this.contextManager.setCoordinates(this.camera.getSphericalCoordinates().latitude, this.camera.getSphericalCoordinates().longitude);
     }

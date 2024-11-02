@@ -34,14 +34,14 @@ app.post('/chat', async (req: Request, res: Response) => {
   const userMessage = req.body.prompt;
   conversation.push({ role: "user", content: userMessage });
   try {
-      const response = await openai.chat.completions.create({
-          model: "gpt-4-turbo-2024-04-09",
-          messages: conversation
-      });
-      conversation.push({ role: "assistant", content: response.choices[0].message.content });
-      res.json({ reply: response.choices[0].message.content, conversation });
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo-2024-04-09",
+      messages: conversation
+    });
+    conversation.push({ role: "assistant", content: response.choices[0].message.content });
+    res.json({ reply: response.choices[0].message.content, conversation });
   } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -55,20 +55,34 @@ app.post('/chat_stream', async (req: Request, res: Response) => {
   res.setHeader('Connection', 'keep-alive');
 
   const stream = await openai.chat.completions.create({
-      model: "gpt-4o-2024-05-13",
-      messages: conversation,
-      stream: true,
+    model: "gpt-4o-2024-05-13",
+    messages: conversation,
+    stream: true,
   });
+  let leftover = '';
 
   try {
-      for await (const chunk of stream) {
-          if (chunk.choices[0]?.delta?.content) {
-              res.write(`${chunk.choices[0].delta.content}\n\n`);
-          }
+    for await (const chunk of stream) {
+      let content = chunk.choices[0]?.delta?.content;
+
+      if (content) {
+        content = leftover + content;
+        const words = content.split(/(\s+)/);
+        if (!/\s$/.test(words[words.length - 1])) {
+          leftover = words.pop() || '';
+        } else {
+          leftover = '';
+        }
+        res.write(words.join(''));
       }
-      res.end();
+    }
+
+    if (leftover) {
+      res.write(leftover);
+    }
+    res.end();
   } catch (error) {
-      res.status(500).json({ error: "Stream was interrupted" });
+    res.status(500).json({ error: "Stream was interrupted" });
   }
 });
 

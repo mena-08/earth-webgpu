@@ -11,10 +11,10 @@
 export async function sendToServer(message: string): Promise<string> {
     try {
         //THIS ONE IS FOR LOCAL TESTING
-        //const response = await fetch('http://localhost:3000/chat', {
-        
-        //THIS ONE IS FOR DEPLOYMENT
-        const response = await fetch('https://earthgpt.a.pinggy.link/chat', {
+        const response = await fetch('http://localhost:3000/chat', {
+
+            //THIS ONE IS FOR DEPLOYMENT
+            //const response = await fetch('https://earthgpt.a.pinggy.link/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -22,7 +22,8 @@ export async function sendToServer(message: string): Promise<string> {
             body: JSON.stringify({
                 prompt: message,
                 conversation: [
-                    { role: 'system', content: 'You are a 3D visualization tool in charge of navigation. Based on the prompt, reply always only with numerical vectors and no space within the brackets:\
+                    {
+                        role: 'system', content: 'You are a 3D visualization tool in charge of navigation. Based on the prompt, reply always only with numerical vectors and no space within the brackets:\
                         Two values for geographic coordinates. [lat,long], be as accurate as possible and use the WGS84. \
                         Three values for 3D object movement. [0,3,0] or [3,3,1] as an example. \
                         A single value along with x, y, or z as literal for rotation. [x,90] or [z,20] as an example If an axis or direction was not given, assume y axis. \
@@ -50,7 +51,8 @@ export async function sendToServerStreaming(message: string, context: string[]):
     const updatedConversation = [...context.map(content => ({ role: 'system', content })), { role: 'user', content: message }];
 
     try {
-        const response = await fetch('https://earthgpt.a.pinggy.link/chat_stream', {
+        //const response = await fetch('https://earthgpt.a.pinggy.link/chat_stream', {
+        const response = await fetch('http://localhost:3000/chat_stream', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -68,10 +70,8 @@ export async function sendToServerStreaming(message: string, context: string[]):
         if (!response.body) {
             throw new Error('Response body is null');
         }
+
         const reader = response.body.getReader();
-        let isFirstChunk = true;
-        let messageContainer: HTMLElement | null = null;
-        let leftover = '';
 
         while (true) {
             const { done, value } = await reader.read();
@@ -80,13 +80,10 @@ export async function sendToServerStreaming(message: string, context: string[]):
                 break;
             }
             const chunk = new TextDecoder("utf-8").decode(value);
-            const cleanedChunk = chunk;
-            allMessages += cleanedChunk;
-            const words = cleanedChunk.split(' ');
-            words[0] = leftover + words[0];
-            leftover = words.pop() || ''; 
+            allMessages += chunk;
         }
-        
+
+
     } catch (error) {
         console.error('Error sending message:', error);
     }

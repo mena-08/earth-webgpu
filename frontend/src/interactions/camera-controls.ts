@@ -54,34 +54,48 @@ export class CameraControls {
     handleMouseWheel = (event: WheelEvent): void => {
         event.preventDefault();
         const zoomSpeed = 0.1;
-
-        //calculate the zoom direction based on the wheel delta
+        const minDistance = 1.5; // Minimum distance from the target
+    
+        // Calculate the zoom direction based on the wheel delta
         const zoomDirection = event.deltaY > 0 ? -1 : 1;
-
-        //calculate the vector from the camera to its target
+    
+        // Calculate the vector from the camera to its target
         let cameraDirection = [
             this.camera.target[0] - this.camera.position[0],
             this.camera.target[1] - this.camera.position[1],
             this.camera.target[2] - this.camera.position[2]
         ];
-
-        //normalize the direction vector
-        const length = Math.sqrt(cameraDirection[0] * cameraDirection[0] + 
-                                cameraDirection[1] * cameraDirection[1] + 
-                                cameraDirection[2] * cameraDirection[2]);
+    
+        // Calculate the current distance between the camera and the target
+        const currentDistance = Math.sqrt(
+            cameraDirection[0] * cameraDirection[0] + 
+            cameraDirection[1] * cameraDirection[1] + 
+            cameraDirection[2] * cameraDirection[2]
+        );
+    
+        // If zooming in and current distance is less than minDistance, do nothing
+        if (zoomDirection > 0 && currentDistance <= minDistance) {
+            return;
+        }
+    
+        // Normalize the direction vector
         cameraDirection = [
-            cameraDirection[0] / length,
-            cameraDirection[1] / length,
-            cameraDirection[2] / length
+            cameraDirection[0] / currentDistance,
+            cameraDirection[1] / currentDistance,
+            cameraDirection[2] / currentDistance
         ];
-
-        //uppdate the camera position based on the zoom direction and speed
-        this.camera.setPosition([this.camera.position[0] + cameraDirection[0] * zoomSpeed * zoomDirection, this.camera.position[1] + cameraDirection[1] * zoomSpeed * zoomDirection, this.camera.position[2] + cameraDirection[2] * zoomSpeed * zoomDirection]);
-
-        //update the camera view matrix
+    
+        // Update the camera position based on the zoom direction and speed
+        this.camera.setPosition([
+            this.camera.position[0] + cameraDirection[0] * zoomSpeed * zoomDirection,
+            this.camera.position[1] + cameraDirection[1] * zoomSpeed * zoomDirection,
+            this.camera.position[2] + cameraDirection[2] * zoomSpeed * zoomDirection
+        ]);
+    
+        // Update the camera view matrix
         this.camera.updateViewMatrix();
-
     }
+    
     
 
     updateCameraOrbit(deltaTime: number) {

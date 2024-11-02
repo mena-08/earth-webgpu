@@ -13,6 +13,7 @@
   "devDependencies": {
     "@rollup/plugin-url": "^8.0.2",
     "@types/dat.gui": "^0.7.13",
+    "@types/node": "^22.8.6",
     "@webgpu/types": "^0.1.44",
     "concurrently": "^8.2.2",
     "rollup-plugin-copy": "^3.5.0",
