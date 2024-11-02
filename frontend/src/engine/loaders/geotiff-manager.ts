@@ -20,6 +20,12 @@ export async function initDigitalElevationModel(url: string) {
         const arrayBuffer = await fetchGeoTIFF(url);
         const elevationData = await parseGeoTIFF(arrayBuffer);
 
+        const mapName = url.split('/').pop()?.split('.')[0] || 'defaultMapName';
+        const mapNameElement = document.getElementById("map-name");
+        if (mapNameElement) {
+            mapNameElement.textContent = mapName;
+        }
+
         return [elevationData.getWidth(), elevationData.getHeight(), elevationData];
     } catch (error) {
         console.error("Failed to initialize Digital Elevation Model:", error);

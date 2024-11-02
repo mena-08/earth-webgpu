@@ -708,10 +708,9 @@ export class Plane {
             fn fs_main(@location(1) zValue: f32) -> @location(0) vec4<f32> {
                 let t = clamp((zValue - zRange.x) / (zRange.y - zRange.x), 0.0, 1.0);
 
-                if (t < 0.1) {
-                    discard;
-                }
-                
+                if (t == 0) { discard; }
+                if (t >= 0.96) { return vec4<f32>(0.0, 1.0, 1.0, 1.0); }
+
                 // Define the colors: purple (bottom), yellow (mid), red (top)
                 let purple = vec3<f32>(0.5, 0.0, 0.5);
                 let yellow = vec3<f32>(1.0, 1.0, 0.0);
@@ -746,12 +745,13 @@ export class Plane {
                 entryPoint: "fs_main",
                 targets: [{ format: 'bgra8unorm' }]
             },
-            primitive: { topology: 'point-list'},//, stripIndexFormat: 'uint32' },
+            primitive: { topology: 'point-list'},
+            //primitive: { topology: 'triangle-strip', stripIndexFormat: 'uint32' },
             depthStencil: { depthWriteEnabled: true, depthCompare: 'less', format: 'depth24plus' }
         });
     }
 
-    laodElevationData(demData: Float32Array): void {
+    loadElevationData(demData: Float32Array): void {
         this.elevationData = demData;
         let minElevation = 0;
         let maxElevation = Number.NEGATIVE_INFINITY;
@@ -774,6 +774,16 @@ export class Plane {
         this.device.queue.writeBuffer(this.zRangeBuffer, 0, new Float32Array([this.minZ, this.maxZ]));
         // Update vertex buffer with new elevations
         this.device.queue.writeBuffer(this.vertexBuffer, 0, this.vertices);
+
+        // Update GUI with min and max elevation values
+        const minElevationElement = document.getElementById("min-elevation");
+        const maxElevationElement = document.getElementById("max-elevation");
+
+        if (minElevationElement && maxElevationElement) {
+            minElevationElement.textContent = minElevation.toFixed(2);
+            const z = maxElevation * 10000;
+            maxElevationElement.textContent = z.toFixed(2);
+        }
     }
 
 

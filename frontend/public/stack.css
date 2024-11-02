@@ -1,0 +1,48 @@
+#gui-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent dark background */
+    color: white;
+    font-family: Arial, sans-serif;
+    border-radius: 8px;
+    max-width: 300px;
+}
+
+.gui-section {
+    margin-bottom: 10px;
+}
+
+.gui-button {
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin: 2px;
+    cursor: pointer;
+}
+
+.gui-button:hover {
+    background-color: #555;
+}
+
+.colorbar {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Space between the label and the color gradient */
+}
+
+.colorbar-label {
+    color: white;
+    font-size: 0.9em;
+}
+
+.colorbar-gradient {
+    flex: 1; /* Takes up remaining space */
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #9d00ff, #f7ff0b, #ff0000); /* Blue to white to red */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}

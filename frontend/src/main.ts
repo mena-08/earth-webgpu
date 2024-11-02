@@ -18,7 +18,6 @@ import * as dat from 'dat.gui';
 let render2: Renderer;
 let sphere: Sphere;
 let sphereMarker: Sphere;
-let chat: ChatManager;
 
 
 // frontend/src/main.ts
@@ -57,30 +56,21 @@ checkWebGPUSupport().then(async (supported) => {
         const render = new Renderer('gpuCanvas',  device);      
         
         render.onReady(async () => {
-            const slopeArray = [
-                0, 0, 10, 10, 26, 26, 26, 26,
-                60, 60, 60, 60, 10, 10, 10, 10
-            ];
-            
+
             const plane = new Plane(device, [0.0, 0.0, 0.0], 3, 3, 3600, 3600);
             //const loader = await initDigitalElevationModel('geoTIFF/agri-medium-dem.tif');
-            const loader = await initDigitalElevationModel('geoTIFF/n19_w156_1arc_v3.tif');
+            const loader = await initDigitalElevationModel('geoTIFF/Jeddah.tif');
             plane.rotate([1.0,0.0,0.0],-Math.PI / 2);
             console.log("width:", loader[0]);
             console.log("height:", loader[1]);
-            // //plane.loadTexture('geotiff/agri-medium-autumn.jpg');
-            // //plane.setMode(1);
 
             if (typeof loader[2] !== 'number') {
                 loader[2].readRasters({interleave: true}).then((rasters: any) => {
-                console.log("RASTERS:", rasters.length);
-                plane.laodElevationData(rasters);
-                //plane.applyElevationData(rasters);
-                //plane.laodElevationData(new Float32Array(slopeArray));
+                console.log("RASTERS:", rasters);
+                plane.loadElevationData(rasters);
                 });
             }
 
-            // console.log(loader[1]);
             render.addObject(plane);
         });
 
