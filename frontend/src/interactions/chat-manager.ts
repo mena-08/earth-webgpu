@@ -1,7 +1,7 @@
 import { ContextManager } from './context-manager';
 import { sendToServerStreaming, sendToServer } from '../network/endpoints';
 import { Camera } from 'engine/camera/camera';
-import { render2, sphere, sphereMarker } from 'main';
+import { render2, sphere, sphereMarker, test } from 'main';
 
 
 /* The `ChatManager` class manages a chat interface by sending and displaying messages between a user
@@ -50,18 +50,24 @@ export class ChatManager {
             this.displayUserMessage(this.inputElement.value);
             this.inputElement.value = '';
             this.contextManager.updateUserContext(message);
-
+    
             try {
-                const response = await sendToServerStreaming(message, this.contextManager.getFullConversation());
+                // Ensure that any asynchronous dataset updates are complete before proceeding
+                //await this.contextManager.setDatasetFromString("https://mena-08.github.io/conversational-website/assets/ocean/sea_surface_temperature/sea_surface_temperature.txt");
+                await this.contextManager.setDatasetFromString(test);
+                
+                const fullConversation = this.contextManager.getFullConversation();
+                console.log('FULL CONVERSATION AFTER DATASET LOAD: ', fullConversation);
+    
+                const response = await sendToServerStreaming(message, fullConversation);
                 this.contextManager.updateSystemContext(response);
-                console.log("Response: ", response.trim());
                 this.displaySystemMessage(response.trim());
             } catch (error) {
                 console.error('Error sending message:', error);
             }
-
         }
     }
+    
 
     private async sendInstruction(): Promise<void> {
         const message = this.inputElement.value.trim();
@@ -158,6 +164,8 @@ export class ChatManager {
     }
 
     getContextManager(): ContextManager {
+        console.log("Returning context manager instance with context:", this.contextManager.getFullConversation());
         return this.contextManager;
     }
+    
 }

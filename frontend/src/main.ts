@@ -17,6 +17,7 @@ let render2: Renderer;
 let sphere: Sphere;
 let sphereMarker: Sphere;
 let chat: ChatManager;
+let test: string;
 
 
 async function checkWebGPUSupport(): Promise<boolean> {
@@ -56,8 +57,8 @@ checkWebGPUSupport().then(async (supported) => {
 
         render2.onReady(() => {
             sphere = new Sphere(device, [0.0, 0.0, 0.0], 1.0);
-            const textureURLs = ['ocean/sea_surface_temperature/sea_surface_temperature.m3u8', 'ocean/phytoplankton/phytoplankton.m3u8', 'ocean/tsunami_alaska/tsunami_alaska.m3u8'];
-            const names = ['Sea Surface Temperature', 'Phytoplankton', 'Tsunami JAPAN'];
+            const textureURLs = ['ocean/turtles/loggerhead_sea_turtles_track.m3u8','ocean/sea_surface_temperature/sea_surface_temperature.m3u8', 'ocean/phytoplankton/phytoplankton.m3u8', 'ocean/tsunami_alaska/tsunami_alaska.m3u8'];
+            const names = ['Loggerhead Sea Turtles','Sea Surface Temperature', 'Phytoplankton', 'Tsunami JAPAN'];
             sphere.loadMultipleTextures(textureURLs);
             const gui = new dat.GUI();
             const textureFolder = gui.addFolder('Datasets');
@@ -65,15 +66,20 @@ checkWebGPUSupport().then(async (supported) => {
 
             // Add buttons for each texture in the GUI
             textureURLs.forEach((url, index) => {
-                textureFolder.add({ loadTexture: async () =>{ 
+                textureFolder.add({ loadTexture: async () => { 
                     sphere.switchTextureByIndex(index);
-                    let x:string = '';
-                    x = `https://mena-08.github.io/conversational-website/assets/${url.replace('.m3u8', '.txt')}`;
-
-                    chat.getContextManager().setDatasetFromString(x);
+                    const x = `https://mena-08.github.io/conversational-website/assets/${url.replace('.m3u8', '.txt')}`;
+                    console.log(x);
+                    test = x;
+                    
+                    // Await the dataset loading
+                    await chat.getContextManager().setDatasetFromString(x);
+                    
+                    console.log("Dataset has been loaded and context updated.");
                 } }, 'loadTexture').name(`${names[index]}`);
-
             });
+            
+            
 
             // // Optionally open the folder by default
             textureFolder.open();
@@ -110,4 +116,4 @@ checkWebGPUSupport().then(async (supported) => {
     }
 });
 
-export { render2, sphere, sphereMarker };
+export { render2, sphere, sphereMarker, test };
