@@ -71,14 +71,24 @@ app.post('/chat_stream', (req, res) => __awaiter(void 0, void 0, void 0, functio
         messages: conversation,
         stream: true,
     });
+    let leftover = '';
     try {
         try {
             for (var _f = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _f = true) {
                 _c = stream_1_1.value;
                 _f = false;
                 const chunk = _c;
-                if ((_e = (_d = chunk.choices[0]) === null || _d === void 0 ? void 0 : _d.delta) === null || _e === void 0 ? void 0 : _e.content) {
-                    res.write(`${chunk.choices[0].delta.content}\n\n`);
+                let content = (_e = (_d = chunk.choices[0]) === null || _d === void 0 ? void 0 : _d.delta) === null || _e === void 0 ? void 0 : _e.content;
+                if (content) {
+                    content = leftover + content;
+                    const words = content.split(/(\s+)/);
+                    if (!/\s$/.test(words[words.length - 1])) {
+                        leftover = words.pop() || '';
+                    }
+                    else {
+                        leftover = '';
+                    }
+                    res.write(words.join(''));
                 }
             }
         }
@@ -88,6 +98,9 @@ app.post('/chat_stream', (req, res) => __awaiter(void 0, void 0, void 0, functio
                 if (!_f && !_a && (_b = stream_1.return)) yield _b.call(stream_1);
             }
             finally { if (e_1) throw e_1.error; }
+        }
+        if (leftover) {
+            res.write(leftover);
         }
         res.end();
     }

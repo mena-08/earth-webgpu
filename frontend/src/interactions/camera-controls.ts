@@ -7,6 +7,8 @@ export class CameraControls {
     private lastMouseX: number | null = null;
     private lastMouseY: number | null = null;
     private mouseDelta = { x: 0, y: 0 };
+    private touchStartPos: { x: number, y: number } | null = null;
+    private lastTouchDistance: number | null = null;
 
     constructor(camera: Camera, canvas: HTMLCanvasElement) {
         this.camera = camera;
@@ -23,6 +25,11 @@ export class CameraControls {
         this.canvas.addEventListener('mouseup', this.handleMouseUp);
         this.canvas.addEventListener('mousemove', this.handleMouseMove);
         this.canvas.addEventListener('wheel', this.handleMouseWheel);
+
+            // Touch events
+        this.canvas.addEventListener('touchstart', this.handleTouchStart);
+        this.canvas.addEventListener('touchmove', this.handleTouchMove);
+        this.canvas.addEventListener('touchend', this.handleTouchEnd);
     }
 
     handleMouseDown = (event: MouseEvent): void => {
@@ -153,4 +160,86 @@ export class CameraControls {
     private moveCamera(direction: [number, number, number]): void {
         this.camera.move(direction);
     }
+
+    handleTouchStart = (event: TouchEvent): void => {
+        if (event.touches.length === 1) {
+            // Single finger for orbit
+            this.touchStartPos = {
+                x: event.touches[0].clientX,
+                y: event.touches[0].clientY
+            };
+        } else if (event.touches.length === 2) {
+            // Two fingers for zoom
+            this.lastTouchDistance = this.getDistanceBetweenTouches(event.touches);
+        }
+    };
+    
+    handleTouchMove = (event: TouchEvent): void => {
+        if (event.touches.length === 1 && this.touchStartPos) {
+            // Orbit control
+            const touchDeltaX = event.touches[0].clientX - this.touchStartPos.x;
+            const touchDeltaY = event.touches[0].clientY - this.touchStartPos.y;
+    
+            this.mouseDelta.x += touchDeltaX;
+            this.mouseDelta.y += touchDeltaY;
+    
+            this.touchStartPos.x = event.touches[0].clientX;
+            this.touchStartPos.y = event.touches[0].clientY;
+        } else if (event.touches.length === 2 && this.lastTouchDistance !== null) {
+            // Zoom control
+            const currentDistance = this.getDistanceBetweenTouches(event.touches);
+            const zoomDelta = (currentDistance - this.lastTouchDistance) * 0.005; // Adjust zoom sensitivity
+    
+            this.handleZoom(zoomDelta);
+            this.lastTouchDistance = currentDistance;
+        }
+    };
+    
+    handleTouchEnd = (): void => {
+        this.touchStartPos = null;
+        this.lastTouchDistance = null;
+    };
+    
+    private getDistanceBetweenTouches(touches: TouchList): number {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    private handleZoom(zoomDelta: number): void {
+        const zoomSpeed = 0.1;
+        const minDistance = 1.5;
+    
+        let cameraDirection = [
+            this.camera.target[0] - this.camera.position[0],
+            this.camera.target[1] - this.camera.position[1],
+            this.camera.target[2] - this.camera.position[2]
+        ];
+    
+        const currentDistance = Math.sqrt(
+            cameraDirection[0] * cameraDirection[0] +
+            cameraDirection[1] * cameraDirection[1] +
+            cameraDirection[2] * cameraDirection[2]
+        );
+    
+        if (zoomDelta > 0 && currentDistance <= minDistance) {
+            return;
+        }
+    
+        cameraDirection = [
+            cameraDirection[0] / currentDistance,
+            cameraDirection[1] / currentDistance,
+            cameraDirection[2] / currentDistance
+        ];
+    
+        this.camera.setPosition([
+            this.camera.position[0] + cameraDirection[0] * zoomSpeed * zoomDelta,
+            this.camera.position[1] + cameraDirection[1] * zoomSpeed * zoomDelta,
+            this.camera.position[2] + cameraDirection[2] * zoomSpeed * zoomDelta
+        ]);
+    
+        this.camera.updateViewMatrix();
+    }
+    
+
 }

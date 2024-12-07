@@ -52,9 +52,10 @@ export class ChatManager {
             this.contextManager.updateUserContext(message);
     
             try {
-                // Ensure that any asynchronous dataset updates are complete before proceeding
-                //await this.contextManager.setDatasetFromString("https://mena-08.github.io/conversational-website/assets/ocean/sea_surface_temperature/sea_surface_temperature.txt");
-                await this.contextManager.setDatasetFromString(test);
+                //ensure finish of async function before sending message
+                if (test){
+                    await this.contextManager.setDatasetFromString(test);
+                }
                 
                 const fullConversation = this.contextManager.getFullConversation();
                 console.log('FULL CONVERSATION AFTER DATASET LOAD: ', fullConversation);
@@ -102,7 +103,6 @@ export class ChatManager {
                                 return;
                         }
                         sphere.rotate(axisVector, parsedValues[1]);
-
                     }
                 } else {
                     console.error('Parsed values are null');

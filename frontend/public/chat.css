@@ -11,7 +11,8 @@
     background: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
     border-radius: 15px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); /* Soft shadow */
-    overflow: hidden;
+    max-height: 80vh; /* Maximum height is 80% of the viewport height */
+    overflow: hidden; /* Ensure contents don't overflow the container */
     transition: all 0.3s ease; /* Smooth transition for resizing */
     z-index: 1000; /* Above everything else */
 }
@@ -70,19 +71,6 @@
     transition: background-color 0.3s ease;
 }
 
-#record-btn {
-    width: 60px;
-    height: 40px;
-    background: #556b2f; /* Dark Olive Green */
-    color: #fffff0; /* Ivory */
-    cursor: pointer;
-    border: none;
-    border-radius: 20px;
-    margin-left: 5px;
-    transition: background-color 0.3s ease;
-}
-
-
 #send-btn:hover, #record-btn:hover {
     background-color: #0056b3;
 }
@@ -94,6 +82,7 @@
 /* Messages container styling */
 #messages {
     overflow-y: auto;
+    max-height: calc(100% - 100px);
     height: 400px; /* Increased height */
 }
 
@@ -113,4 +102,47 @@
 
 #download-interaction {
     z-index: 1000;
+}
+
+/* Styles for smaller screens (mobile devices) */
+@media only screen and (max-width: 768px) {
+    #chat-container {
+        width: 90%; /* Reduce width to 90% of the screen */
+        bottom: 5px; /* Adjust the bottom margin */
+        right: 10px; /* Adjust the right margin */
+        height: 50%; /* Make it occupy less vertical space */
+        margin: 0 auto; /* Center horizontally */
+        max-height: 70vh; /* Constrain the height to 70% of the viewport height */
+    }
+
+    #messages {
+        height: calc(100% - 100px); /* Adjust height dynamically based on the new chatbox size */
+        max-height: calc(60vh - 80px); /* Adjust dynamically based on the viewport */
+    }
+
+    #chat-input-container {
+        flex-direction: column; /* Stack the input and buttons vertically */
+    }
+
+    #chat-input {
+        margin-right: 0; /* Remove right margin */
+        margin-bottom: 10px; /* Add spacing below the input */
+        width: 100%; /* Make the input take full width */
+    }
+
+    #send-btn, #record-btn {
+        width: 100%; /* Make buttons take full width */
+        margin-left: 0; /* Remove left margin */
+    }
+}
+
+/* Draggable bar styling */
+#chat-resize-bar {
+    height: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    cursor: row-resize;
+    border-radius: 15px 15px 0 0; /* Rounded corners at the top */
+    width: 100%;
+    position: relative;
+    z-index: 1001; /* Above the chatbox background */
 }

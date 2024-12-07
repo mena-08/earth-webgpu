@@ -27,7 +27,7 @@ export class Renderer {
     constructor(canvasId: string, device: GPUDevice) {
         this.device = device;
         this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-        this.camera = new Camera([2.0, 2.0, 5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.width / this.canvas.height, 0.1, 1000000);
+        this.camera = new Camera([2.0, 2.0, 5.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0], 45, this.canvas.clientWidth / this.canvas.clientHeight, 0.1, 1000000);
         this.initializeWebGPU(this.device).then(async () => {
             this.setupScene();
             this.isReady = true;
@@ -47,6 +47,26 @@ export class Renderer {
             //this.scene.addObject(triangle);
             //this.scene.keyboardControlsSetter = new KeyboardControls(this.scene);
             this.startRenderingLoop();
+
+            // Add ResizeObserver for canvas resizing
+            const observer = new ResizeObserver(entries => {
+                for (const entry of entries) {
+                    const width = entry.contentBoxSize[0].inlineSize;
+                    const height = entry.contentBoxSize[0].blockSize;
+                    this.canvas.width = Math.max(1, Math.min(width, this.device.limits.maxTextureDimension2D));
+                    this.canvas.height = Math.max(1, Math.min(height, this.device.limits.maxTextureDimension2D));
+                    
+                    // Update camera aspect ratio to maintain relation
+                    this.camera.setAspectRatio(this.canvas.width / this.canvas.height);
+                    this.camera.updateProjectionMatrix();
+                    this.createDepthTexture();
+
+                    // Trigger re-render
+                    this.render();
+                }
+            });
+            observer.observe(this.canvas);
+
         }).catch(error => {
             console.error("Failed to initialize WebGPU:", error);
         });
@@ -132,6 +152,7 @@ export class Renderer {
         const textureView = this.context.getCurrentTexture().createView();
 
         const renderPassDescriptor: GPURenderPassDescriptor = {
+            label: 'Clear-RenderPass',
             colorAttachments: [{
                 view: textureView,
                 loadOp: 'clear',
@@ -165,11 +186,12 @@ export class Renderer {
         this.camera.updateProjectionMatrix();
         this.cameraControls.updateCameraOrbit(0.01);        
 
-        const commandEncoder = this.device.createCommandEncoder({label: 'Frame Encoder'});
+        const commandEncoder = this.device.createCommandEncoder({label: 'Main Frame Command Encoder'});
         const textureView = this.context.getCurrentTexture().createView();
         const depthTextureView = this.depthTexture.createView();
 
         const renderPassDescriptor: GPURenderPassDescriptor = {
+            label: 'Main-RenderPass',
             colorAttachments: [{
                 view: textureView,
                 loadOp: 'clear',
