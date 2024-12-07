@@ -709,7 +709,8 @@ export class Plane {
                 let t = clamp((zValue - zRange.x) / (zRange.y - zRange.x), 0.0, 1.0);
 
                 if (t == 0) { discard; }
-                if (t >= 0.96) { return vec4<f32>(0.0, 1.0, 1.0, 1.0); }
+                //if (t<=0.1) { return vec4<f32>(0.2, 0.2, 0.2, 1.0); }
+                //if (t >= 0.96) { return vec4<f32>(0.0, 1.0, 1.0, 1.0); }
 
                 // Define the colors: purple (bottom), yellow (mid), red (top)
                 let purple = vec3<f32>(0.5, 0.0, 0.5);
