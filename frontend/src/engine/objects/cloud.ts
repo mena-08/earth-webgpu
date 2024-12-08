@@ -1,27 +1,57 @@
+import { Camera } from "engine/camera/camera";
+
 export class CloudComputeTest {
     private device: GPUDevice;
     private computePipeline!: GPUComputePipeline;
+    private densityTexture!: GPUTexture;
     private densityBuffer!: GPUBuffer;
     private resultBuffer!: GPUBuffer;
-    private bindGroup!: GPUBindGroup;
+    private renderBindGroup!: GPUBindGroup;
+    private computeBindGroup!: GPUBindGroup;
+
+    //rendering part
+    private renderPipeline!: GPURenderPipeline;
+    private cubeBuffer!: GPUBuffer;
+    private sampler!: GPUSampler; 
+    private uniformBuffer!: GPUBuffer;
 
     constructor(device: GPUDevice) {
         this.device = device;
         this.initializeBuffers();
         this.createComputePipeline();
-        this.createBindGroup();
+        this.createRenderPipeline();
+
+        this.createCubeBuffer();
+        this.createSampler();
+        this.createRenderBindGroup();
+        this.createComputeBindGroup();
     }
 
     private initializeBuffers(): void {
-        const bufferSize = 128 * 128 * 128 * Float32Array.BYTES_PER_ELEMENT; // Example: Small 3D grid
+        const bufferSize = 256 * 256 * 256 * Float32Array.BYTES_PER_ELEMENT;
         this.densityBuffer = this.device.createBuffer({
+            label: "density-buffer",
             size: bufferSize,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
         });
 
         this.resultBuffer = this.device.createBuffer({
+            label: "result-buffer",
             size: bufferSize,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+
+        this.densityTexture = this.device.createTexture({
+            label: "density-texture",
+            size: { width: 256, height: 256, depthOrArrayLayers: 256 },
+            dimension: "3d",
+            format: "r32float",
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC,
+        });
+
+        this.uniformBuffer = this.device.createBuffer({
+            size: 128,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
     }
 
@@ -29,19 +59,18 @@ export class CloudComputeTest {
         const computeShaderCode = `
         @group(0) @binding(0) var<storage, read_write> densityBuffer : array<f32>;
 
-        @compute @workgroup_size(4, 4, 4)
+        @compute @workgroup_size(8, 8, 4)
         fn main(@builtin(global_invocation_id) id : vec3<u32>) {
-            let size = vec3<u32>(128, 128, 128);
+            let size = vec3<u32>(256, 256, 256);
             let index = id.x + size.x * (id.y + size.y * id.z);
             if (id.x < size.x && id.y < size.y && id.z < size.z) {
                 let uvw = vec3<f32>(id) / vec3<f32>(size);
-                let density = fbm(uvw); // Example: Procedural noise
+                let density = fbm(uvw);
                 densityBuffer[index] = density;
             }
         }
 
         fn fbm(position: vec3<f32>) -> f32 {
-            // Example noise function
             return fract(sin(dot(position, vec3<f32>(12.9898, 78.233, 45.164))) * 43758.5453);
         }
         `;
@@ -56,11 +85,150 @@ export class CloudComputeTest {
         });
     }
 
-    private createBindGroup(): void {
-        const bindGroupLayout = this.computePipeline.getBindGroupLayout(0);
-        this.bindGroup = this.device.createBindGroup({
+    private createRenderPipeline(): void {
+        const vertexShaderCode = `
+            struct Uniforms{
+                viewMatrix: mat4x4<f32>,
+                projectionMatrix: mat4x4<f32>,
+            }
+            @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+            struct VertexInput {
+                @location(0) position: vec3<f32>
+            };
+
+            struct VertexOutput {
+                @builtin(position) position: vec4<f32>,
+                @location(0) uvw: vec3<f32>
+            };
+
+            @vertex
+            fn main(input: VertexInput) -> VertexOutput {
+                var output: VertexOutput;
+                let worldPosition = vec4<f32>(input.position, 1.0);
+                let viewPosition = uniforms.viewMatrix * worldPosition;
+                let clipPosition = uniforms.projectionMatrix * viewPosition;
+                output.position = clipPosition;
+                output.uvw = (input.position + vec3<f32>(1.0)) ; // Normalize to [0, 1]
+                return output;
+            }
+            `;
+
+            const fragmentShaderCode = `
+            @group(0) @binding(1) var densityTexture : texture_3d<f32>;
+            @group(0) @binding(2) var sampler3D : sampler;
+
+            @fragment
+            fn main(@location(0) uvw : vec3<f32>) -> @location(0) vec4<f32> {
+                let density = textureSample(densityTexture, sampler3D, uvw).r;
+                return vec4<f32>(density, density, density, 1.0); // Grayscale output
+            }`;
+
+            this.renderPipeline = this.device.createRenderPipeline({
+                label: "cloud-render-pipeline",
+                layout: "auto",
+                vertex: {
+                    module: this.device.createShaderModule({ code: vertexShaderCode }),
+                    entryPoint: "main",
+                    buffers: [
+                        {
+                            arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
+                            attributes: [
+                                {
+                                    shaderLocation: 0,
+                                    offset: 0,
+                                    format: "float32x3",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                fragment: {
+                    module: this.device.createShaderModule({ code: fragmentShaderCode }),
+                    entryPoint: "main",
+                    targets: [{ format: "bgra8unorm" }],
+                },
+                primitive: {
+                    topology: "triangle-list",
+                },
+                depthStencil: {
+                    depthWriteEnabled: true,
+                    depthCompare: 'less',
+                    format: 'depth24plus',
+                }
+            });
+    }
+    private createCubeBuffer(): void {
+        const cubeVertices = new Float32Array([
+            // Front face
+            -1, -1,  1,   1, -1,  1,   1,  1,  1,
+            -1, -1,  1,   1,  1,  1,  -1,  1,  1,
+            // Back face
+            -1, -1, -1,  -1,  1, -1,   1,  1, -1,
+            -1, -1, -1,   1,  1, -1,   1, -1, -1,
+            // Top face
+            -1,  1, -1,  -1,  1,  1,   1,  1,  1,
+            -1,  1, -1,   1,  1,  1,   1,  1, -1,
+            // Bottom face
+            -1, -1, -1,   1, -1, -1,   1, -1,  1,
+            -1, -1, -1,   1, -1,  1,  -1, -1,  1,
+            // Right face
+             1, -1, -1,   1,  1, -1,   1,  1,  1,
+             1, -1, -1,   1,  1,  1,   1, -1,  1,
+            // Left face
+            -1, -1, -1,  -1, -1,  1,  -1,  1,  1,
+            -1, -1, -1,  -1,  1,  1,  -1,  1, -1,
+        ]);
+    
+        this.cubeBuffer = this.device.createBuffer({
+            size: cubeVertices.byteLength,
+            usage: GPUBufferUsage.VERTEX,
+            mappedAtCreation: true,
+        });
+    
+        new Float32Array(this.cubeBuffer.getMappedRange()).set(cubeVertices);
+        this.cubeBuffer.unmap();
+    }
+
+    private createSampler(): void {
+        this.sampler = this.device.createSampler({
+            // magFilter: "nearest",
+            // minFilter: "nearest",
+            // mipmapFilter: "nearest",
+        });
+    }
+
+    private createRenderBindGroup(): void {
+        const bindGroupLayout = this.renderPipeline.getBindGroupLayout(0);
+    
+        this.renderBindGroup = this.device.createBindGroup({
+            label: "cloud-render-bind-group",
             layout: bindGroupLayout,
-            label: "cloud-bind-group",
+            entries: [
+                {
+                  binding: 0,
+                  resource: {buffer: this.uniformBuffer},  
+                },
+                {
+                    binding: 1,
+                    resource: this.densityTexture.createView({
+                        dimension: "3d",
+                    }),
+                },
+                {
+                    binding: 2,
+                    resource: this.sampler,
+                },
+            ],
+        });
+    }
+    
+    
+    private createComputeBindGroup(): void {
+        const bindGroupLayout = this.computePipeline.getBindGroupLayout(0);
+        this.computeBindGroup = this.device.createBindGroup({
+            layout: bindGroupLayout,
+            label: "cloud-compute-bind-group",
             entries: [
                 {
                     binding: 0,
@@ -71,6 +239,13 @@ export class CloudComputeTest {
     }
 
     public async compute(): Promise<void> {
+        //TEST BUFFER TO TEXTURE, THEN, TEXTURE TO BUFFER
+        const textureDebugBuffer = this.device.createBuffer({
+            label: "texture-debug-buffer",
+            size: 256 * 256 * 256 * Float32Array.BYTES_PER_ELEMENT, // Match texture size
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+
         // Command encoder
         const commandEncoder = this.device.createCommandEncoder();
 
@@ -78,9 +253,48 @@ export class CloudComputeTest {
         const passEncoder = commandEncoder.beginComputePass();
         passEncoder.setPipeline(this.computePipeline);
         
-        passEncoder.setBindGroup(0, this.bindGroup);
-        passEncoder.dispatchWorkgroups(32, 32, 32); // Adjust based on buffer size
+        passEncoder.setBindGroup(0, this.computeBindGroup);
+        passEncoder.dispatchWorkgroups(64, 64, 64);
         passEncoder.end();
+
+        //try to copy the buffer to the 3d texture now
+        const bytesPerRow = 256 * Float32Array.BYTES_PER_ELEMENT;
+        const rowsPerImage = 256;
+        commandEncoder.copyBufferToTexture(
+            {
+                buffer: this.densityBuffer,
+                bytesPerRow: bytesPerRow,
+                rowsPerImage: rowsPerImage,
+            },
+            {
+                texture: this.densityTexture,
+            },
+            {
+                width: 256,
+                height: 256,
+                depthOrArrayLayers: 256,
+            }
+        );
+
+        //2. Copy the texture to the buffer
+        commandEncoder.copyTextureToBuffer(
+            {
+                texture: this.densityTexture,
+                mipLevel: 0,
+                origin: { x: 0, y: 0, z: 0 },
+            },
+            {
+                buffer: textureDebugBuffer,
+                bytesPerRow: 256 * Float32Array.BYTES_PER_ELEMENT,
+                rowsPerImage: 256,
+            },
+            {
+                width: 256,
+                height: 256,
+                depthOrArrayLayers: 256,
+            }
+        );
+        
 
         // Copy the density buffer to the result buffer
         commandEncoder.copyBufferToBuffer(this.densityBuffer, 0, this.resultBuffer, 0, this.densityBuffer.size);
@@ -88,10 +302,39 @@ export class CloudComputeTest {
         // Submit the commands
         this.device.queue.submit([commandEncoder.finish()]);
 
+
         // Read back the result
         await this.resultBuffer.mapAsync(GPUMapMode.READ);
+        await textureDebugBuffer.mapAsync(GPUMapMode.READ);
+        const debugData = new Float32Array(textureDebugBuffer.getMappedRange());
         const result = new Float32Array(this.resultBuffer.getMappedRange());
-        console.log("Computed Densities:", result.slice(0, 100)); // Log first 100 values for testing
+        console.log(this.densityTexture, this.densityBuffer, this.resultBuffer);
+        console.log("Computed Densities:", result.slice(0,1000000));
+        console.log("TEXTURE VALUES:", debugData.slice(0,100));
         this.resultBuffer.unmap();
+    }
+
+    public draw(renderPass: GPURenderPassEncoder, camera:Camera): void {
+
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            0,
+            camera.viewMatrix.buffer,
+            camera.viewMatrix.byteOffset,
+            camera.viewMatrix.byteLength
+        );
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            64,
+            camera.projectionMatrix.buffer,
+            camera.projectionMatrix.byteOffset,
+            camera.projectionMatrix.byteLength
+        );
+
+        console.log("DRAWING CLOUDS...");
+        renderPass.setPipeline(this.renderPipeline);
+        renderPass.setVertexBuffer(0, this.cubeBuffer);
+        renderPass.setBindGroup(0, this.renderBindGroup);
+        renderPass.draw(36, 1, 0, 0);
     }
 }

@@ -59,6 +59,7 @@ checkWebGPUSupport().then(async (supported) => {
         
         render.onReady(async () => {
             cloud.compute();
+            render.addObject(cloud);
             const triangle =  new Triangle(device, [1.0, 0.0, 0.0, 1.0],[0.0, 0.0, 0.0]);
 
             // const plane = new Plane(device, [0.0, 0.0, 0.0], 3, 3, 3600, 3600);

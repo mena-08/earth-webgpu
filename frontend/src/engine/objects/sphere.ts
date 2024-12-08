@@ -49,8 +49,6 @@ export class Sphere {
                 { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform', hasDynamicOffset: false, minBindingSize: 192 } },
                 { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
                 { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-                //{ binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-                // { binding: 4, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
             ]
         });
     }

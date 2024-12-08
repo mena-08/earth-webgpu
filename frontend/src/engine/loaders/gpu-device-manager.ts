@@ -23,7 +23,16 @@ class GPUDeviceManager {
             throw new Error("Failed to get GPU adapter.");
         }
 
-        this.device = await adapter.requestDevice();
+        if (adapter.features.has('float32-filterable')) {
+            console.log("Float32-filterable feature is supported!");
+        } else {
+            console.error("Float32-filterable feature is not supported on this device.");
+        }
+        
+
+        this.device = await adapter.requestDevice({
+            requiredFeatures:['float32-filterable']
+        });
         return this.device;
     }
 
