@@ -61,23 +61,7 @@ checkWebGPUSupport().then(async (supported) => {
             cloud.compute();
             render.addObject(cloud);
             const triangle =  new Triangle(device, [1.0, 0.0, 0.0, 1.0],[0.0, 0.0, 0.0]);
-
-            // const plane = new Plane(device, [0.0, 0.0, 0.0], 3, 3, 3600, 3600);
-            // //const loader = await initDigitalElevationModel('geoTIFF/agri-medium-dem.tif');
-            // // const loader = await initDigitalElevationModel('geoTIFF/Jeddah.tif');
-            // const loader = await initDigitalElevationModel('geoTIFF/Durango_2.tif');
-            // plane.rotate([1.0,0.0,0.0],-Math.PI / 2);
-            // console.log("width:", loader[0]);
-            // console.log("height:", loader[1]);
-
-            // if (typeof loader[2] !== 'number') {
-            //     loader[2].readRasters({interleave: true}).then((rasters: any) => {
-            //     console.log("RASTERS:", rasters);
-            //     plane.loadElevationData(rasters);
-            //     });
-            // }
-
-            // render.addObject(plane);
+            render.addObject(cloud);
             render.addObject(triangle);
         });
 

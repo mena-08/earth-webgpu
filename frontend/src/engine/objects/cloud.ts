@@ -29,7 +29,8 @@ export class CloudComputeTest {
     }
 
     private initializeBuffers(): void {
-        const bufferSize = 256 * 256 * 256 * Float32Array.BYTES_PER_ELEMENT;
+        // const bufferSize = 256 * 256 * 256 * Float32Array.BYTES_PER_ELEMENT;
+        const bufferSize = 128 * 128 * 128 * Float32Array.BYTES_PER_ELEMENT;
         this.densityBuffer = this.device.createBuffer({
             label: "density-buffer",
             size: bufferSize,
@@ -44,7 +45,8 @@ export class CloudComputeTest {
 
         this.densityTexture = this.device.createTexture({
             label: "density-texture",
-            size: { width: 256, height: 256, depthOrArrayLayers: 256 },
+            // size: { width: 256, height: 256, depthOrArrayLayers: 256 },
+            size: { width: 128, height: 128, depthOrArrayLayers: 128 },
             dimension: "3d",
             format: "r32float",
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC,
@@ -57,7 +59,7 @@ export class CloudComputeTest {
     }
 
     private createPointBuffer(): void {
-        const gridSize = 256;
+        const gridSize = 128;
         const points = [];
     
         for (let x = 0; x < gridSize; x++) {
@@ -67,10 +69,11 @@ export class CloudComputeTest {
                     const v = y / (gridSize - 1);
                     const w = z / (gridSize - 1);
     
+                    // Add randomness for better cloud distribution
                     points.push(
-                        u * 2 - 1, // Map to [-1, 1] for cube space
-                        v * 2 - 1,
-                        w * 2 - 1
+                        (u * 2 - 1) + Math.random() * 0.3, 
+                        (v * 2 - 1) + Math.random() * 0.3, 
+                        (w * 2 - 1) + Math.random() * 0.3
                     );
                 }
             }
@@ -91,10 +94,10 @@ export class CloudComputeTest {
     private createComputePipeline(): void {
         const computeShaderCode = `
         fn hash(n: f32) -> f32 {
-    return fract(sin(n) * 43758.5453);
-}
+            return fract(sin(n) * 43758.5453);
+        }
 
-fn noise(p: vec3<f32>) -> f32 {
+        fn noise(p: vec3<f32>) -> f32 {
     let i = floor(p);
     let f = fract(p);
 
@@ -114,32 +117,50 @@ fn noise(p: vec3<f32>) -> f32 {
 fn fbm(p: vec3<f32>) -> f32 {
     var total: f32 = 0.0;
     var frequency: f32 = 1.0;
-    var amplitude: f32 = 0.5;
+    var amplitude: f32 = 1.0;
 
     for (var i = 0; i < 5; i = i + 1) {
-        total += noise(p * frequency) * amplitude;
-        frequency *= 2.0;
-        amplitude *= 0.5;
+        total += noise(p) * amplitude;
+        frequency *= 0.5;
+        amplitude *= 0.9;
     }
-
-    return clamp(total, 0.0, 1.0);
+    return total;
 }
 
-@group(0) @binding(0) var<storage, read_write> densityBuffer: array<f32>;
+fn generateDensity(uvw: vec3<f32>) -> f32 {
+    let turbulence = fbm(uvw);
+    let heightFalloff = smoothstep(0.0, 0.1, uvw.y);
+    return clamp(turbulence * heightFalloff, 0.0, 1.0);
+}
 
-@compute @workgroup_size(8, 8, 4)
+fn clouds(uvw: vec3<f32>) -> f32 {
+    // Add layers of turbulence for cloud formation
+    let turbulence = fbm(uvw) * 0.2 + fbm(uvw);
+
+    // Simulate a vertical density falloff (clouds taper at the edges)
+    let heightFalloff = smoothstep(0.2, 0.8, uvw.y); 
+
+    // Add some randomness for scattered clouds
+    let scatter = fbm(uvw);
+
+    return clamp(turbulence * heightFalloff + scatter, 0.0, 1.0);
+}
+
+@group(0) @binding(0) var<storage, read_write> densityBuffer: array<f32>; // Ensure binding to storage buffer
+
+
+@compute @workgroup_size(8, 4, 8)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    let size = vec3<u32>(256, 256, 256);
+    let size = vec3<u32>(16, 16, 16);
     let index = id.x + size.x * (id.y + size.y * id.z);
 
     if (id.x < size.x && id.y < size.y && id.z < size.z) {
-        let uvw = vec3<f32>(id) / vec3<f32>(size);
-        let density = fbm(uvw * 10.0); // Scale to control cloud detail
+        let uvw = vec3<f32>(id) / vec3<f32>(size) / 7 ; // Normalize to [0, 1]
+        let density = generateDensity(uvw);
         densityBuffer[index] = density;
     }
 }
-
-        `;
+`;
 
         this.computePipeline = this.device.createComputePipeline({
             label: "cloud-compute-pipeline",
@@ -153,67 +174,67 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
     private createRenderPipeline(): void {
         const vertexShaderCode = `
-            struct Uniforms{
-                viewMatrix: mat4x4<f32>,
-                projectionMatrix: mat4x4<f32>,
-            }
-            @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+            struct Uniforms {
+    viewMatrix: mat4x4<f32>,
+    projectionMatrix: mat4x4<f32>,
+};
 
-            struct VertexInput {
-                @location(0) position: vec3<f32>
-            };
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
-            struct VertexOutput {
-                @builtin(position) position: vec4<f32>,
-                @location(0) uvw: vec3<f32>
-            };
+struct VertexInput {
+    @location(0) position: vec3<f32>
+};
 
-            @vertex
-            fn main(input: VertexInput) -> VertexOutput {
-                var output: VertexOutput;
-                let worldPosition = vec4<f32>(input.position, 1.0);
-                let viewPosition = uniforms.viewMatrix * worldPosition;
-                let clipPosition = uniforms.projectionMatrix * viewPosition;
-                output.position = clipPosition;
-                output.uvw = (input.position + vec3<f32>(1.0))/4; // Normalize to [0, 1]
-                return output;
-            }
-            `;
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) uvw: vec3<f32>
+};
 
-            const fragmentShaderCode = `
-        @group(0) @binding(1) var densityTexture: texture_3d<f32>;
+@vertex
+fn main(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    let worldPosition = vec4<f32>(input.position, 1.0);
+    let viewPosition = uniforms.viewMatrix * worldPosition;
+    let clipPosition = uniforms.projectionMatrix * viewPosition;
+
+    output.position = clipPosition;
+    output.uvw = (input.position + vec3<f32>(1.0)); // Normalize to [0, 1]
+    return output;
+}`;
+
+        const fragmentShaderCode = `
+       @group(0) @binding(1) var densityTexture: texture_3d<f32>;
 @group(0) @binding(2) var sampler3D: sampler;
 
 @fragment
 fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
-    let rayStart = vec3<f32>(-1.0, -1.0, -1.0); // Start of ray
-    let rayDir = normalize(uvw - rayStart);    // Ray direction
-    let steps = 256;                           // Number of ray steps
-    let stepSize = 5.0 / f32(steps);           // Step size in volume space
+    let rayStart = vec3<f32>(0.0, 0.0, 0.0); // Starting position of the ray
+    let rayDir = normalize(vec3<f32>(uvw.x, uvw.y, 1.0)); // Fixed direction along +z
+    let steps = 64; // Fixed number of raymarching steps
+    let stepSize = 1.0 / f32(steps); // Step size in volume space
 
-    var sumColor = vec3<f32>(0.0);
-    var alpha = 0.0;
+    var accumulatedColor = vec3<f32>(0.0);
+    var accumulatedAlpha = 0.0;
 
+    // Fixed loop for raymarching
     for (var i = 0; i < steps; i = i + 1) {
         let pos = rayStart + rayDir * f32(i) * stepSize;
 
-        // Ensure sampling position is within bounds
-        let isInside = all(pos >= vec3<f32>(0.0)) && all(pos <= vec3<f32>(1.0));
-        let density = select(0.0, textureSample(densityTexture, sampler3D, pos).r, isInside);
+        // Sample density from the 3D texture
+        let density = textureSample(densityTexture, sampler3D, pos).r;
 
-        var localAlpha = clamp(density, 0.0, 1.0) * 0.1; // Map density to alpha, adjust transparency
-        let color = mix(vec3<f32>(1.0), vec3<f32>(0.8, 0.8, 0.9), localAlpha); // Cloud color
+        // Map density to alpha
+        let alpha = clamp(density * 0.2, 0.0, 1.0); 
 
-        sumColor += (1.0 - alpha) * localAlpha * color;
-        alpha += (1.0 - alpha) * localAlpha;
-
-        // Avoid breaking the loop; manage alpha blending accumulation uniformly
+        // Accumulate color and alpha contributions
+        let color = vec3<f32>(1.0); // Static white cloud color
+        accumulatedColor += (0.4 - accumulatedAlpha) * color ;
+        accumulatedAlpha += (1.0 - accumulatedAlpha) * alpha;
     }
 
-    return vec4<f32>(sumColor, alpha);
+    // Final color output with accumulated alpha
+    return vec4<f32>(accumulatedColor, accumulatedAlpha);
 }
-
-
 `;
 
             this.renderPipeline = this.device.createRenderPipeline({
@@ -256,7 +277,7 @@ fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
                     topology: "point-list",
                 },
                 depthStencil: {
-                    depthWriteEnabled: false,
+                    depthWriteEnabled: true,
                     depthCompare: 'always',
                     format: 'depth24plus',
                 }
@@ -346,7 +367,7 @@ fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
         //TEST BUFFER TO TEXTURE, THEN, TEXTURE TO BUFFER
         const textureDebugBuffer = this.device.createBuffer({
             label: "texture-debug-buffer",
-            size: 256 * 256 * 256 * Float32Array.BYTES_PER_ELEMENT, // Match texture size
+            size: 128 * 128 * 128 * Float32Array.BYTES_PER_ELEMENT, // Match texture size
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
 
@@ -358,12 +379,12 @@ fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
         passEncoder.setPipeline(this.computePipeline);
         
         passEncoder.setBindGroup(0, this.computeBindGroup);
-        passEncoder.dispatchWorkgroups(64, 64, 64);
+        passEncoder.dispatchWorkgroups(32, 32, 32);
         passEncoder.end();
 
         //try to copy the buffer to the 3d texture now
-        const bytesPerRow = 256 * Float32Array.BYTES_PER_ELEMENT;
-        const rowsPerImage = 256;
+        const bytesPerRow = 128 * Float32Array.BYTES_PER_ELEMENT;
+        const rowsPerImage = 128;
         commandEncoder.copyBufferToTexture(
             {
                 buffer: this.densityBuffer,
@@ -374,9 +395,9 @@ fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
                 texture: this.densityTexture,
             },
             {
-                width: 256,
-                height: 256,
-                depthOrArrayLayers: 256,
+                width: 128,
+                height: 128,
+                depthOrArrayLayers: 128,
             }
         );
 
@@ -389,13 +410,13 @@ fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
             },
             {
                 buffer: textureDebugBuffer,
-                bytesPerRow: 256 * Float32Array.BYTES_PER_ELEMENT,
-                rowsPerImage: 256,
+                bytesPerRow: 128 * Float32Array.BYTES_PER_ELEMENT,
+                rowsPerImage: 128,
             },
             {
-                width: 256,
-                height: 256,
-                depthOrArrayLayers: 256,
+                width: 128,
+                height: 128,
+                depthOrArrayLayers: 128,
             }
         );
         
@@ -439,6 +460,6 @@ fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
         renderPass.setPipeline(this.renderPipeline);
         renderPass.setVertexBuffer(0, this.cubeBuffer);
         renderPass.setBindGroup(0, this.renderBindGroup);
-        renderPass.draw(256*256*256, 1, 0, 0);
+        renderPass.draw(128*128*128, 1, 0, 0);
     }
 }
