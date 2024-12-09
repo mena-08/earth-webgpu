@@ -1,0 +1,471 @@
+import { Camera } from "engine/camera/camera";
+
+export class CloudComputeTest {
+    private device: GPUDevice;
+    private computePipeline!: GPUComputePipeline;
+    private densityTexture!: GPUTexture;
+    private densityBuffer!: GPUBuffer;
+    private resultBuffer!: GPUBuffer;
+    private renderBindGroup!: GPUBindGroup;
+    private computeBindGroup!: GPUBindGroup;
+
+    //rendering part
+    private renderPipeline!: GPURenderPipeline;
+    private cubeBuffer!: GPUBuffer;
+    private sampler!: GPUSampler; 
+    private uniformBuffer!: GPUBuffer;
+
+    constructor(device: GPUDevice) {
+        this.device = device;
+        this.initializeBuffers();
+        this.createComputePipeline();
+        this.createRenderPipeline();
+        this.createPointBuffer();
+
+        //this.createCubeBuffer();
+        this.createSampler();
+        this.createRenderBindGroup();
+        this.createComputeBindGroup();
+    }
+
+    private initializeBuffers(): void {
+        const bufferSize = 256 * 256 * 256 * Float32Array.BYTES_PER_ELEMENT;
+        this.densityBuffer = this.device.createBuffer({
+            label: "density-buffer",
+            size: bufferSize,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+        });
+
+        this.resultBuffer = this.device.createBuffer({
+            label: "result-buffer",
+            size: bufferSize,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+
+        this.densityTexture = this.device.createTexture({
+            label: "density-texture",
+            size: { width: 256, height: 256, depthOrArrayLayers: 256 },
+            dimension: "3d",
+            format: "r32float",
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC,
+        });
+
+        this.uniformBuffer = this.device.createBuffer({
+            size: 128,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+    }
+
+    private createPointBuffer(): void {
+        const gridSize = 256;
+        const points = [];
+    
+        for (let x = 0; x < gridSize; x++) {
+            for (let y = 0; y < gridSize; y++) {
+                for (let z = 0; z < gridSize; z++) {
+                    const u = x / (gridSize - 1);
+                    const v = y / (gridSize - 1);
+                    const w = z / (gridSize - 1);
+    
+                    points.push(
+                        u * 2 - 1,
+                        v * 2 - 1,
+                        w * 2 - 1
+                    );
+                }
+            }
+        }
+    
+        const pointBuffer = new Float32Array(points);
+        this.cubeBuffer = this.device.createBuffer({
+            size: pointBuffer.byteLength,
+            usage: GPUBufferUsage.VERTEX,
+            mappedAtCreation: true,
+        });
+    
+        new Float32Array(this.cubeBuffer.getMappedRange()).set(pointBuffer);
+        this.cubeBuffer.unmap();
+    }
+    
+
+    private createComputePipeline(): void {
+        const computeShaderCode = `
+       @group(0) @binding(0) var<storage, read_write> densityBuffer : array<f32>;
+
+fn fbm(position: vec3<f32>) -> f32 {
+    let m = mat3x3<f32>(
+        0.00, 1.60, 1.20,
+        -1.60, 0.72, -0.96,
+        -1.20, -0.96, 1.28
+    );
+
+    var pos = position; // Mutable copy of position
+    var total: f32 = 0.0;
+    var frequency: f32 = 1.0;
+    var amplitude: f32 = 0.5;
+
+    for (var i = 0; i < 4; i = i + 1) {
+        total += noise(pos * frequency) * amplitude;
+        pos = m * pos; // Update the mutable copy
+        frequency *= 2.0;
+        amplitude *= 0.5;
+    }
+
+    return clamp(total, 0.0, 1.0);
+}
+
+fn noise(position: vec3<f32>) -> f32 {
+    let p = floor(position);
+    let f = fract(position);
+    let n = p.x + p.y * 57.0 + p.z * 113.0;
+
+    return mix(
+        mix(
+            mix(hash(n), hash(n + 1.0), f.x),
+            mix(hash(n + 57.0), hash(n + 58.0), f.x),
+            f.y
+        ),
+        mix(
+            mix(hash(n + 113.0), hash(n + 114.0), f.x),
+            mix(hash(n + 170.0), hash(n + 171.0), f.x),
+            f.y
+        ),
+        f.z
+    );
+}
+
+fn hash(n: f32) -> f32 {
+    return fract(sin(n) * 43758.5453);
+}
+
+@compute @workgroup_size(8, 8, 4)
+fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+    let size = vec3<u32>(256, 256, 256);
+    let index = id.x + size.x * (id.y + size.y * id.z);
+
+    if (id.x < size.x && id.y < size.y && id.z < size.z) {
+        let uvw = vec3<f32>(id) / vec3<f32>(size); // Normalize to [0, 1]
+        let position = uvw * 100.0; // Scale to a larger space for noise generation
+
+        // Generate density using FBM
+        let density = fbm(position);
+
+        // Apply a threshold to simulate clouds
+        let threshold = 0.5;
+        densityBuffer[index] = select(0.0, density, density > threshold);
+    }
+}
+`;
+
+        this.computePipeline = this.device.createComputePipeline({
+            label: "cloud-compute-pipeline",
+            layout: "auto",
+            compute: {
+                module: this.device.createShaderModule({ code: computeShaderCode }),
+                entryPoint: "main",
+            },
+        });
+    }
+
+    private createRenderPipeline(): void {
+        const vertexShaderCode = `
+            struct Uniforms{
+                viewMatrix: mat4x4<f32>,
+                projectionMatrix: mat4x4<f32>,
+            }
+            @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+            struct VertexInput {
+                @location(0) position: vec3<f32>
+            };
+
+            struct VertexOutput {
+                @builtin(position) position: vec4<f32>,
+                @location(0) uvw: vec3<f32>
+            };
+
+            @vertex
+            fn main(input: VertexInput) -> VertexOutput {
+                var output: VertexOutput;
+                let worldPosition = vec4<f32>(input.position, 1.0);
+                let viewPosition = uniforms.viewMatrix * worldPosition;
+                let clipPosition = uniforms.projectionMatrix * viewPosition;
+                output.position = clipPosition;
+                output.uvw = (input.position + vec3<f32>(1.0)); // Normalize to [0, 1]
+                return output;
+            }
+            `;
+
+            const fragmentShaderCode = `
+         @group(0) @binding(1) var densityTexture: texture_3d<f32>;
+@group(0) @binding(2) var sampler3D: sampler;
+
+@fragment
+fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
+    let rayOrigin = vec3<f32>(0.0, 0.0, -1.0); // Camera origin
+    let rayDirection = normalize(vec3<f32>(uvw - 0.5)); // Ray direction through fragment
+    let lightDirection = normalize(vec3<f32>(0.1, 0.25, 0.9)); // Light direction
+    let maxSteps = 100; // Number of ray marching steps
+    let stepSize = 0.01; // Step size along the ray
+
+    var color = vec3<f32>(0.0);
+    var alpha = 0.0;
+
+    var currentPosition = rayOrigin;
+
+    for (var i = 0; i < maxSteps; i = i + 1) {
+        // Perform texture sampling without branching
+        let density = textureSample(densityTexture, sampler3D, currentPosition).r;
+        let lightIntensity = max(dot(lightDirection, normalize(currentPosition)), 0.0);
+
+        let scatterColor = mix(vec3<f32>(1.0, 1.0, 1.0), vec3<f32>(0.3, 0.3, 0.3), density);
+        let voxelColor = scatterColor * lightIntensity;
+
+        let voxelAlpha = density * stepSize;
+
+        // Use a mask to stop contributing to color and alpha after reaching full opacity
+        let mask = f32(alpha < 1.0);
+        color += voxelColor * voxelAlpha * (1.0 - alpha) * mask;
+        alpha += voxelAlpha * mask;
+
+        currentPosition += rayDirection * stepSize;
+    }
+
+    return vec4<f32>(color, alpha);
+}
+
+`;
+
+            this.renderPipeline = this.device.createRenderPipeline({
+                label: "cloud-render-pipeline",
+                layout: "auto",
+                vertex: {
+                    module: this.device.createShaderModule({ 
+                        code: vertexShaderCode,
+                        label: "vertex-shader"
+                    }),
+                    entryPoint: "main",
+                    
+                    buffers: [
+                        {
+                            arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
+                            attributes: [
+                                { shaderLocation: 0, offset: 0, format: "float32x3", },
+                            ],
+                        },
+                    ],
+                },
+                fragment: {
+                    module: this.device.createShaderModule({ 
+                        code: fragmentShaderCode,
+                        label: "fragment-shader"
+                    }),
+                    entryPoint: "main",
+                    targets: [
+                        {
+                            format: "bgra8unorm",
+                            blend: {
+                                color: {
+                                    srcFactor: "src-alpha",
+                                    dstFactor: "one-minus-src-alpha",
+                                    operation: "add",
+                                },
+                                alpha: {
+                                    srcFactor: "one",
+                                    dstFactor: "one-minus-src-alpha",
+                                    operation: "add",
+                                },
+                            },
+                        },
+                    ],
+                },
+                primitive: {
+                    topology: "point-list",
+                },
+                depthStencil: {
+                    depthWriteEnabled: true,
+                    depthCompare: 'less',
+                    format: 'depth24plus',
+                }
+            });
+    }
+    private createCubeBuffer(): void {
+        const cubeVertices = new Float32Array([
+            // Front face
+            -1, -1,  1,   1, -1,  1,   1,  1,  1,
+            -1, -1,  1,   1,  1,  1,  -1,  1,  1,
+            // Back face
+            -1, -1, -1,  -1,  1, -1,   1,  1, -1,
+            -1, -1, -1,   1,  1, -1,   1, -1, -1,
+            // Top face
+            -1,  1, -1,  -1,  1,  1,   1,  1,  1,
+            -1,  1, -1,   1,  1,  1,   1,  1, -1,
+            // Bottom face
+            -1, -1, -1,   1, -1, -1,   1, -1,  1,
+            -1, -1, -1,   1, -1,  1,  -1, -1,  1,
+            // Right face
+             1, -1, -1,   1,  1, -1,   1,  1,  1,
+             1, -1, -1,   1,  1,  1,   1, -1,  1,
+            // Left face
+            -1, -1, -1,  -1, -1,  1,  -1,  1,  1,
+            -1, -1, -1,  -1,  1,  1,  -1,  1, -1,
+        ]);
+    
+        this.cubeBuffer = this.device.createBuffer({
+            size: cubeVertices.byteLength,
+            usage: GPUBufferUsage.VERTEX,
+            mappedAtCreation: true,
+        });
+    
+        new Float32Array(this.cubeBuffer.getMappedRange()).set(cubeVertices);
+        this.cubeBuffer.unmap();
+    }
+
+    private createSampler(): void {
+        this.sampler = this.device.createSampler({
+            // magFilter: "nearest",
+            // minFilter: "nearest",
+            // mipmapFilter: "nearest",
+        });
+    }
+
+    private createRenderBindGroup(): void {
+        const bindGroupLayout = this.renderPipeline.getBindGroupLayout(0);
+    
+        this.renderBindGroup = this.device.createBindGroup({
+            label: "cloud-render-bind-group",
+            layout: bindGroupLayout,
+            entries: [
+                {
+                  binding: 0,
+                  resource: {buffer: this.uniformBuffer},  
+                },
+                {
+                    binding: 1,
+                    resource: this.densityTexture.createView({
+                        dimension: "3d",
+                    }),
+                },
+                {
+                    binding: 2,
+                    resource: this.sampler,
+                },
+            ],
+        });
+    }
+    
+    
+    private createComputeBindGroup(): void {
+        const bindGroupLayout = this.computePipeline.getBindGroupLayout(0);
+        this.computeBindGroup = this.device.createBindGroup({
+            layout: bindGroupLayout,
+            label: "cloud-compute-bind-group",
+            entries: [
+                {
+                    binding: 0,
+                    resource: { buffer: this.densityBuffer },
+                },
+            ],
+        });
+    }
+
+    public async compute(): Promise<void> {
+        //TEST BUFFER TO TEXTURE, THEN, TEXTURE TO BUFFER
+        const textureDebugBuffer = this.device.createBuffer({
+            label: "texture-debug-buffer",
+            size: 256 * 256 * 256 * Float32Array.BYTES_PER_ELEMENT, // Match texture size
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+
+        // Command encoder
+        const commandEncoder = this.device.createCommandEncoder();
+
+        // Compute pass
+        const passEncoder = commandEncoder.beginComputePass();
+        passEncoder.setPipeline(this.computePipeline);
+        
+        passEncoder.setBindGroup(0, this.computeBindGroup);
+        passEncoder.dispatchWorkgroups(64, 64, 64);
+        passEncoder.end();
+
+        //try to copy the buffer to the 3d texture now
+        const bytesPerRow = 256 * Float32Array.BYTES_PER_ELEMENT;
+        const rowsPerImage = 256;
+        commandEncoder.copyBufferToTexture(
+            {
+                buffer: this.densityBuffer,
+                bytesPerRow: bytesPerRow,
+                rowsPerImage: rowsPerImage,
+            },
+            {
+                texture: this.densityTexture,
+            },
+            {
+                width: 256,
+                height: 256,
+                depthOrArrayLayers: 256,
+            }
+        );
+
+        //2. Copy the texture to the buffer
+        commandEncoder.copyTextureToBuffer(
+            {
+                texture: this.densityTexture,
+                mipLevel: 0,
+                origin: { x: 0, y: 0, z: 0 },
+            },
+            {
+                buffer: textureDebugBuffer,
+                bytesPerRow: 256 * Float32Array.BYTES_PER_ELEMENT,
+                rowsPerImage: 256,
+            },
+            {
+                width: 256,
+                height: 256,
+                depthOrArrayLayers: 256,
+            }
+        );
+        
+
+        // Copy the density buffer to the result buffer
+        commandEncoder.copyBufferToBuffer(this.densityBuffer, 0, this.resultBuffer, 0, this.densityBuffer.size);
+
+        // Submit the commands
+        this.device.queue.submit([commandEncoder.finish()]);
+
+
+        // Read back the result
+        await this.resultBuffer.mapAsync(GPUMapMode.READ);
+        await textureDebugBuffer.mapAsync(GPUMapMode.READ);
+        const debugData = new Float32Array(textureDebugBuffer.getMappedRange());
+        const result = new Float32Array(this.resultBuffer.getMappedRange());
+        console.log(this.densityTexture, this.densityBuffer, this.resultBuffer);
+        console.log("Computed Densities:", result.slice(0,1000000));
+        console.log("TEXTURE VALUES:", debugData.slice(0,100));
+        this.resultBuffer.unmap();
+    }
+
+    public draw(renderPass: GPURenderPassEncoder, camera:Camera): void {
+
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            0,
+            camera.viewMatrix.buffer,
+            camera.viewMatrix.byteOffset,
+            camera.viewMatrix.byteLength
+        );
+        this.device.queue.writeBuffer(
+            this.uniformBuffer,
+            64,
+            camera.projectionMatrix.buffer,
+            camera.projectionMatrix.byteOffset,
+            camera.projectionMatrix.byteLength
+        );
+
+        console.log("DRAWING CLOUDS...");
+        renderPass.setPipeline(this.renderPipeline);
+        renderPass.setVertexBuffer(0, this.cubeBuffer);
+        renderPass.setBindGroup(0, this.renderBindGroup);
+        renderPass.draw(256*256*256, 1, 0, 0);
+    }
+}

@@ -78,6 +78,20 @@ export class Camera {
         return { latitude, longitude };
     }
 
+    get inverseViewProjectionMatrix(): Float32Array {
+
+        const viewProjection = mat4.create();
+
+        mat4.multiply(viewProjection, this.projectionMatrix, this.viewMatrix);
+
+        const inverseVP = mat4.create();
+
+        mat4.invert(inverseVP, viewProjection);
+
+        return inverseVP;
+
+    }
+
     setSphericalPosition(radius: number, latitude: number, longitude: number): void {
         const latRad = (latitude * Math.PI) / 180;
         const longRad = (longitude * Math.PI) / 180;
