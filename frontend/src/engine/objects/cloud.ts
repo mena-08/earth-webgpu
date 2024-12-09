@@ -119,45 +119,41 @@ fn fbm(p: vec3<f32>) -> f32 {
     var frequency: f32 = 1.0;
     var amplitude: f32 = 1.0;
 
-    for (var i = 0; i < 5; i = i + 1) {
-        total += noise(p) * amplitude;
-        frequency *= 0.5;
-        amplitude *= 0.9;
+    for (var i = 0; i < 6; i = i + 1) {
+        total += noise(p * frequency) * amplitude;
+        frequency *= 2.0;
+        amplitude *= 0.5;
     }
     return total;
 }
 
 fn generateDensity(uvw: vec3<f32>) -> f32 {
-    let turbulence = fbm(uvw);
-    let heightFalloff = smoothstep(0.0, 0.1, uvw.y);
+    let frequency = 8.0; // Increase frequency for finer details
+    let turbulence = fbm(uvw * frequency);
+    let heightFalloff = smoothstep(0.1, 0.9, uvw.y); // Adjust height falloff
     return clamp(turbulence * heightFalloff, 0.0, 1.0);
 }
 
 fn clouds(uvw: vec3<f32>) -> f32 {
-    // Add layers of turbulence for cloud formation
-    let turbulence = fbm(uvw) * 0.2 + fbm(uvw);
-
-    // Simulate a vertical density falloff (clouds taper at the edges)
-    let heightFalloff = smoothstep(0.2, 0.8, uvw.y); 
-
-    // Add some randomness for scattered clouds
-    let scatter = fbm(uvw);
-
-    return clamp(turbulence * heightFalloff + scatter, 0.0, 1.0);
+    let baseTurbulence = fbm(uvw * 4.0); // Adjust frequency
+    let layeredTurbulence = fbm(uvw * 8.0) * 0.5; // Add layers
+    let heightFalloff = smoothstep(0.2, 0.8, uvw.y); // Ensure a smoother vertical gradient
+    return clamp(baseTurbulence + layeredTurbulence * heightFalloff, 0.0, 1.0);
 }
+
 
 @group(0) @binding(0) var<storage, read_write> densityBuffer: array<f32>; // Ensure binding to storage buffer
 
 
 @compute @workgroup_size(8, 4, 8)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    let size = vec3<u32>(16, 16, 16);
+    let size = vec3<u32>(8, 8, 8);
     let index = id.x + size.x * (id.y + size.y * id.z);
 
     if (id.x < size.x && id.y < size.y && id.z < size.z) {
-        let uvw = vec3<f32>(id) / vec3<f32>(size) / 7 ; // Normalize to [0, 1]
+        let uvw = vec3<f32>(id) / vec3<f32>(size) + fbm(vec3<f32>(id) * 0.1);
         let density = generateDensity(uvw);
-        densityBuffer[index] = density;
+        densityBuffer[index] = clamp(density * 1.5, 0.0, 1.0);
     }
 }
 `;
@@ -198,7 +194,7 @@ fn main(input: VertexInput) -> VertexOutput {
     let clipPosition = uniforms.projectionMatrix * viewPosition;
 
     output.position = clipPosition;
-    output.uvw = (input.position + vec3<f32>(1.0)); // Normalize to [0, 1]
+    output.uvw = (input.position + vec3<f32>(1.0)) / 0.8; // Normalize to [0, 1]
     return output;
 }`;
 
@@ -210,7 +206,7 @@ fn main(input: VertexInput) -> VertexOutput {
 fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
     let rayStart = vec3<f32>(0.0, 0.0, 0.0); // Starting position of the ray
     let rayDir = normalize(vec3<f32>(uvw.x, uvw.y, 1.0)); // Fixed direction along +z
-    let steps = 64; // Fixed number of raymarching steps
+    let steps = 72; // Fixed number of raymarching steps
     let stepSize = 1.0 / f32(steps); // Step size in volume space
 
     var accumulatedColor = vec3<f32>(0.0);
@@ -224,11 +220,11 @@ fn main(@location(0) uvw: vec3<f32>) -> @location(0) vec4<f32> {
         let density = textureSample(densityTexture, sampler3D, pos).r;
 
         // Map density to alpha
-        let alpha = clamp(density * 0.2, 0.0, 1.0); 
+        let alpha = clamp(density * 0.5, 0.0, 1.0); 
 
         // Accumulate color and alpha contributions
         let color = vec3<f32>(1.0); // Static white cloud color
-        accumulatedColor += (0.4 - accumulatedAlpha) * color ;
+        accumulatedColor += (1.0 - accumulatedAlpha) * color ;
         accumulatedAlpha += (1.0 - accumulatedAlpha) * alpha;
     }
 
