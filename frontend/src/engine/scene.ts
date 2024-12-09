@@ -1,5 +1,6 @@
 import { Camera } from "./camera/camera";
 import { KeyboardControls } from "../interactions/keyboard-controls"; // Adjust the import path as necessary
+import { CloudComputeTest } from "./objects/cloud";
 
 // frontend/src/engine/scene.ts
 export class Scene {
@@ -35,6 +36,14 @@ export class Scene {
     }
 
     draw(passEncoder: GPURenderPassEncoder, camera: Camera): void {
+        // First update all objects that need compute
+        // for (const obj of this.objects.values()) {
+        //     if (obj instanceof CloudComputeTest) {
+        //         obj.compute();
+        //     }
+        // }
+    
+        // Now draw all objects
         for (const obj of this.objects.values()) {
             obj.draw(passEncoder, camera);
         }

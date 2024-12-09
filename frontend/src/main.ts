@@ -16,10 +16,11 @@ import * as dat from 'dat.gui';
 import { CloudComputeTest } from "engine/objects/cloud";
 
 
+
 let render2: Renderer;
 let sphere: Sphere;
 let sphereMarker: Sphere;
-
+let cloud: CloudComputeTest;  
 
 // frontend/src/main.ts
 async function checkWebGPUSupport(): Promise<boolean> {
@@ -55,7 +56,7 @@ checkWebGPUSupport().then(async (supported) => {
         await deviceManager.initializeDevice();
         const device = deviceManager.getDevice();
         const render = new Renderer('gpuCanvas',  device);
-        const cloud = new CloudComputeTest(device);  
+        cloud = new CloudComputeTest(device);
         
         render.onReady(async () => {
             cloud.compute();
@@ -70,4 +71,4 @@ checkWebGPUSupport().then(async (supported) => {
     }
 });
 
-export { render2, sphere, sphereMarker };
+export { render2, sphere, sphereMarker, cloud };
